@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Parsear datos del body (ahora incluye rif opcional)
+    // Parsear datos del body
     const { email, fullName, role, rif } = await req.json();
     
     // Validaciones básicas
@@ -50,28 +50,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Verificar si el email ya existe en la tabla profile
-    const { data: existingUser } = await supabaseAdmin
-      .from("profile")
-      .select("email")
-      .eq("email", email)
-      .single();
+    // Verificar si el email ya existe en Auth
+    const { data: existingAuthUser } = await supabaseAdmin.auth.admin.listUsers();
+    const userExists = existingAuthUser.users.some(u => u.email === email);
 
-    if (existingUser) {
+    if (userExists) {
       return new Response(
         JSON.stringify({ error: "Este correo electrónico ya está registrado" }),
         { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // URL de redirección (usar variable de entorno o localhost)
+    // URL de redirección
     const redirectUrl = Deno.env.get("SITE_URL") 
       ? `${Deno.env.get("SITE_URL")}/reset-password`
       : "http://localhost:5173/reset-password";
 
-    // Construir metadata para Auth
+    // Construir metadata para el trigger (usar raw_user_meta_data)
     const userMetadata: Record<string, any> = {
-      full_name: fullName,
+      name: fullName, 
       role: role,
     };
 
@@ -80,7 +77,7 @@ Deno.serve(async (req) => {
       userMetadata.rif = rif;
     }
 
-    // Invitar usuario en Auth
+    // Invitar usuario en Auth (el trigger handle_new_user_invite creará el perfil automáticamente)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
       email,
       {
@@ -96,31 +93,24 @@ Deno.serve(async (req) => {
     }
 
     console.log("✅ Usuario creado en Auth:", authData.user.id);
+    console.log("✅ El trigger debería crear el perfil automáticamente");
 
-    // Crear perfil en la tabla profile
-    const profileData: Record<string, any> = {
-      id: authData.user.id,
-      email: email,
-      full_name: fullName,
-      role: role,
-      password_change_required: true,
-    };
+    // Esperar un momento para que el trigger se ejecute
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Agregar RIF al perfil solo si existe
-    if (rif) {
-      profileData.rif = rif;
-    }
-
-    const { error: profileError } = await supabaseAdmin
+    // Verificar que el perfil se creó
+    const { data: profile, error: profileCheckError } = await supabaseAdmin
       .from("profile")
-      .insert(profileData);
+      .select("*")
+      .eq("id", authData.user.id)
+      .single();
 
-    if (profileError) {
-      console.error("❌ Error al crear perfil:", profileError);
-      throw new Error(`Error al crear perfil: ${profileError.message}`);
+    if (profileCheckError || !profile) {
+      console.error("❌ El trigger no creó el perfil:", profileCheckError);
+      throw new Error("Error: el perfil no se creó automáticamente");
     }
 
-    console.log("✅ Perfil creado exitosamente");
+    console.log("✅ Perfil verificado:", profile);
 
     return new Response(
       JSON.stringify({
@@ -128,7 +118,7 @@ Deno.serve(async (req) => {
         user: {
           id: authData.user.id,
           email: email,
-          full_name: fullName,
+          name: fullName, 
           role: role,
           ...(rif && { rif }),
         },
