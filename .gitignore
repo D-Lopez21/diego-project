@@ -1,0 +1,8 @@
+.env
+.env.local
+.env.*
+
+**/.env
+
+supabase/.temp/
+supabase/functions/*/.env
