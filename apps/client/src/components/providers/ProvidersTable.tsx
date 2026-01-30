@@ -22,6 +22,7 @@ export default function ProvidersTable() {
           <thead className="bg-neutral-50 text-xs uppercase text-neutral-500">
             <tr>
               <th className="px-6 py-4 font-semibold">Nombre</th>
+              <th className="px-6 py-4 font-semibold">RIF</th>
               <th className="px-6 py-4 font-semibold">Rol</th>
               <th className="px-6 py-4 font-semibold">Estado</th>
               <th className="px-6 py-4 font-semibold">Cambio Pass</th>
@@ -32,7 +33,7 @@ export default function ProvidersTable() {
             {providers.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="px-6 py-10 text-center text-neutral-400"
                 >
                   No hay proveedores registrados.
@@ -51,6 +52,11 @@ export default function ProvidersTable() {
                     <div className="text-xs text-neutral-400">
                       {provider.id.slice(0, 8)}...
                     </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="font-mono text-neutral-700">
+                      {provider?.rif || 'N/A'}
+                    </span>
                   </td>
                   <td className="px-6 py-4">
                     <span

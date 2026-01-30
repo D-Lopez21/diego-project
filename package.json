@@ -19,6 +19,7 @@
     "lint": "turbo run lint"
   },
   "devDependencies": {
+    "baseline-browser-mapping": "^2.9.19",
     "eslint": "7.32.0",
     "turbo": "latest"
   },
