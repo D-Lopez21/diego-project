@@ -21,6 +21,17 @@ Deno.serve(async (req) => {
   try {
     // Verificar secret de invitación
     const secretHeader = req.headers.get("x-invite-secret");
+
+    console.log('headers', req.headers)
+    
+    console.log('=== DEBUG AUTH ===')
+  console.log('Expected secret:', Deno.env.get("INVITE_SECRET"))
+  console.log('Provided secret:', secretHeader)
+  console.log('Match:', secretHeader === Deno.env.get("INVITE_SECRET"))
+  console.log('Expected length:', Deno.env.get("INVITE_SECRET")?.length)
+  console.log('Provided length:', secretHeader?.length)
+
+
     if (secretHeader !== Deno.env.get("INVITE_SECRET")) {
       return new Response(JSON.stringify({ error: "No autorizado" }), {
         status: 401,
@@ -30,6 +41,8 @@ Deno.serve(async (req) => {
 
     // Parsear datos del body
     const { email, fullName, rif } = await req.json();
+
+    console.log('request', { email, fullName, rif })
     
     // Validaciones: para proveedor, RIF es OBLIGATORIO
     if (!email || !fullName || !rif) {
