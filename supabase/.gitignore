@@ -22,3 +22,11 @@ npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 .pnpm-debug.log*
+
+# Turborepo
+.turbo/
+.turbo
+**/.turbo/
+**/.turbo
+*.turbo*.log
+.turbolog

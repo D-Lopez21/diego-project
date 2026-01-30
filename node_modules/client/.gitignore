@@ -59,3 +59,11 @@ pnpm-debug.log*
 
 # Vite
 vite.config.ts.timestamp-*
+
+# Turborepo
+.turbo/
+.turbo
+**/.turbo/
+**/.turbo
+*.turbo*.log
+.turbolog

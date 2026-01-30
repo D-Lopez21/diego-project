@@ -71,3 +71,11 @@ supabase/functions/**/.env.local
 
 # Build outputs
 *.tsbuildinfo
+
+# Turborepo
+.turbo/
+.turbo
+**/.turbo/
+**/.turbo
+*.turbo*.log
+.turbolog
