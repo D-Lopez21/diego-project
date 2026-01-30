@@ -11,8 +11,6 @@ export default function ProvidersPage() {
     setModalIsOpen(false);
   };
 
-  console.log('new providers');
-
   return (
     <DashboardLayout title="Gestión de Proveedores" returnTo="/">
       <div id="header-actions" className="w-full flex justify-end">
