@@ -79,5 +79,6 @@ supabase/functions/**/.env.local
 **/.turbo
 *.turbo*.log
 .turbolog
+.turbo.log
 
 node_modules/
