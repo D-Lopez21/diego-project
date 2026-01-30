@@ -1,8 +1,66 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+.nyc_output
+
+# Production
+build/
+dist/
+.next/
+out/
+
+# Environment variables
 .env
 .env.local
-.env.*
-
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
 **/.env
+**/.env.local
 
-supabase/.temp/
-supabase/functions/*/.env
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Turborepo
+.turbo/
+
+# Vercel
+.vercel
+
+# Supabase
+supabase/.env
+supabase/.env.local
+supabase/functions/**/.env
+supabase/functions/**/.env.local
+.supabase/
+
+# Build outputs
+*.tsbuildinfo

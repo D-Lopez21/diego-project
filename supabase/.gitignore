@@ -1,0 +1,17 @@
+# Supabase Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Supabase Functions Environment Variables
+functions/**/.env
+functions/**/.env.local
+
+# Supabase local database
+.supabase/
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
