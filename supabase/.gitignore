@@ -30,3 +30,5 @@ pnpm-debug.log*
 **/.turbo
 *.turbo*.log
 .turbolog
+
+node_modules/

@@ -67,3 +67,5 @@ vite.config.ts.timestamp-*
 **/.turbo
 *.turbo*.log
 .turbolog
+
+node_modules/
