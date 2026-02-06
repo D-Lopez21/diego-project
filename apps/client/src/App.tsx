@@ -13,6 +13,9 @@ import {
   UsersPage,
   ChangePassword,
   ResetPassword,
+  CreateBillPage,
+  BillDetailsPage,
+  BillsPage,
 } from './pages';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
@@ -50,6 +53,30 @@ function App() {
       element: (
         <ProtectedRoute>
           <Home />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/bills',
+      element: (
+        <ProtectedRoute>
+          <BillsPage />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: 'bills/:id',
+      element: (
+        <ProtectedRoute>
+          <BillDetailsPage />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/create-bill',
+      element: (
+        <ProtectedRoute>
+          <CreateBillPage />
         </ProtectedRoute>
       ),
     },

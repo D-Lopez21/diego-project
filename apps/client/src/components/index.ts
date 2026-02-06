@@ -6,3 +6,7 @@ export { default as SignUpPage } from './SignUpPage';
 export { default as UsersPage } from './UsersPage';
 export { default as ProvidersPage } from './ProvidersPage';
 export { default as ResetPasswordPage } from './ResetPasswordPage';
+export { default as BillingPage } from './BillingPage';
+export { default as BillsTable } from './BillsTable';
+export { default as ProviderRegistrationModal } from './providers/ProviderRegistrationModal';
+export { default as ProvidersTable } from './providers/ProvidersTable';
