@@ -5,8 +5,8 @@ import BillsTable from './BillsTable';
 import { useNavigate } from 'react-router';
 
 export default function BillingPage() {
-     const navigate = useNavigate();
-  const [selectedBillId, setSelectedBillId] = React.useState<string | null>(null);
+const navigate = useNavigate();
+const [selectedBillId, setSelectedBillId] = React.useState<string | null>(null);
 
   const handleNewBill = () => {
     setSelectedBillId(null);

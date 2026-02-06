@@ -63,7 +63,7 @@ export default function BillsTable() {
                 >
                   <td className="px-6 py-4">
                     <div className="font-medium text-neutral-900">
-                      {bill.n_fact || 'Sin N°'}
+                      {bill.n_billing || 'Sin N°'}
                     </div>
                     <div className="text-xs text-neutral-400">
                       {bill.id.slice(0, 8)}...
@@ -81,7 +81,7 @@ export default function BillsTable() {
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-neutral-700">
-                      {bill.n_siniestro || '-'}
+                      {bill.n_claim || '-'}
                     </span>
                   </td>
                   <td className="px-6 py-4">

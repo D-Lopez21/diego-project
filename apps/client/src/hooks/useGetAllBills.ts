@@ -2,7 +2,6 @@ import React from 'react';
 import { supabase } from '../lib/supabase';
 import type { Bill } from '../components/bills-details/interfaces';
 
-
 interface Provider {
   id: string;
   name: string;
@@ -11,7 +10,6 @@ interface Provider {
   active: boolean;
 }
 
-// TODO: REVISAR Y OPTIMIZAR ESTE HOOK
 export function useGetAllBills() {
   const [bills, setBills] = React.useState<Bill[]>([]);
   const [providers, setProviders] = React.useState<Provider[]>([]);
@@ -23,7 +21,8 @@ export function useGetAllBills() {
       const { data, error: supabaseError } = await supabase
         .from('bills')
         .select('*')
-        .order('created_at', { ascending: false }); // Ordenar por más reciente primero
+        // CAMBIO: Usamos arrival_date porque created_at no existe en tu tabla
+        .order('arrival_date', { ascending: false }); 
 
       if (supabaseError) throw supabaseError;
       setBills(data || []);
@@ -39,7 +38,7 @@ export function useGetAllBills() {
       const { data, error: supabaseError } = await supabase
         .from('profile')
         .select('*')
-        .eq('role', 'proveedor')
+        .eq('role', 'proveedor') // Asegúrate que en la tabla profile el rol sea exacto
         .eq('active', true)
         .order('name', { ascending: true });
 
@@ -51,28 +50,24 @@ export function useGetAllBills() {
   }, []);
 
   React.useEffect(() => {
-    // 1. Carga inicial
     fetchBills();
     fetchProviders();
 
-    // 2. Suscripción en tiempo real para bills
     const billsChannel = supabase
       .channel('bills-changes')
       .on(
         'postgres_changes',
         {
-          event: '*', // Escucha INSERT, UPDATE y DELETE
+          event: '*',
           schema: 'public',
           table: 'bills',
         },
         () => {
-          // Cuando algo cambie, volvemos a pedir los datos
           fetchBills();
         },
       )
       .subscribe();
 
-    // 3. Suscripción en tiempo real para proveedores
     const providersChannel = supabase
       .channel('providers-changes')
       .on(
@@ -81,16 +76,15 @@ export function useGetAllBills() {
           event: '*',
           schema: 'public',
           table: 'profile',
+          // Filtro corregido para la suscripción real-time
           filter: 'role=eq.proveedor',
         },
         () => {
-          // Actualizar proveedores cuando cambien
           fetchProviders();
         },
       )
       .subscribe();
 
-    // 4. Limpiar suscripciones al desmontar el componente
     return () => {
       supabase.removeChannel(billsChannel);
       supabase.removeChannel(providersChannel);

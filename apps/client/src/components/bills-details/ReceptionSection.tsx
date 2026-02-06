@@ -21,9 +21,9 @@ export default function ReceptionSection({
         <Input
           label="Fecha de Recepción"
           type="date"
-          value={data.fecha_recepcion}
+          value={data.arrival_date}
           onChange={(e) =>
-            setData({ ...data, fecha_recepcion: e.target.value })
+            setData({ ...data, arrival_date: e.target.value })
           }
         />
 
@@ -40,20 +40,20 @@ export default function ReceptionSection({
 
         <Input
           label="N° de Siniestro"
-          value={data.n_siniestro}
-          onChange={(e) => setData({ ...data, n_siniestro: e.target.value })}
+          value={data.n_claim}
+          onChange={(e) => setData({ ...data, n_claim: e.target.value })}
         />
 
         <Input
           label="Fact / Proform"
-          value={data.fact_proform}
-          onChange={(e) => setData({ ...data, fact_proform: e.target.value })}
+          value={data.type}
+          onChange={(e) => setData({ ...data, type: e.target.value })}
         />
 
         <Input
           label="N° de Fact"
-          value={data.n_fact}
-          onChange={(e) => setData({ ...data, n_fact: e.target.value })}
+          value={data.n_billing}
+          onChange={(e) => setData({ ...data, n_billing: e.target.value })}
         />
 
         <Input
@@ -67,16 +67,10 @@ export default function ReceptionSection({
           value={data.currency_type}
           onChange={(e) => setData({ ...data, currency_type: e.target.value })}
           options={[
-            {
-              label: 'Dolares',
-              value: 'USD',
-            },
-            {
-              label: 'Bolívares',
-              value: 'VES',
-            },
+            { label: 'Dólares', value: 'USD' }, // El value debe ser USD
+            { label: 'Bolívares', value: 'VES' }, // El value debe ser VES
           ]}
-        />
+          />  
 
         <Input
           label="Monto Total Facturado"
@@ -89,15 +83,14 @@ export default function ReceptionSection({
 
         <Select
           label="Analista Receptor"
-          value={analysts.find((a: any) => a.id === data.analyst_receptor_id)?.id || ''}
+          value={data.analyst_receptor_id}
           onChange={(e) => setData({ ...data, analyst_receptor_id: e.target.value })}
           required
-          options={analysts.map((p: any) => ({
-            value: p.id,
-            label: `${p.name}${p.rif ? ` - ${p.rif}` : ''}`,
+          options={analysts.map((a: any) => ({
+            value: a.id,
+            label: a.name,
           }))}
         />
-
       </div>
 
       <div className="flex justify-end">

@@ -1,9 +1,9 @@
 export interface RecepcionData {
-  fecha_recepcion: string;
+  arrival_date: string;
   suppliers_id: string;
-  n_siniestro: string;
-  fact_proform: string;
-  n_fact: string;
+  n_claim: string;
+  type: string;
+  n_billing: string;
   n_control: string;
   currency_type: string;
   total_billing: string;
@@ -61,11 +61,11 @@ export type SectionId =
 
 export interface Bill {
   id: string;
-  fecha_recepcion?: string;
+  arrival_date?: string;
   suppliers_id?: string;
-  n_siniestro?: string;
-  fact_proform?: string;
-  n_fact?: string;
+  n_claim?: string;
+  type?: string;
+  n_billing?: string;
   n_control?: string;
   currency_type?: string;
   total_billing?: string;
