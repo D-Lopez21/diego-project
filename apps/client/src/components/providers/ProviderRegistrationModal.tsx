@@ -1,37 +1,53 @@
 import React, { useState } from 'react';
-import { useRegistration } from '../../hooks/useSignUp';
+import { useCreateProvider } from '../../hooks/useCreateProvider';
 import { Button, Input, Modal } from '../common';
 
-type UserRegistrationModalProps = {
+type ProviderRegistrationModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onProviderRegistered: () => void;
 };
 
-export default function UserRegistrationModal({
+export default function ProviderRegistrationModal({
   isOpen,
   onClose,
   onProviderRegistered,
-}: UserRegistrationModalProps) {
+}: ProviderRegistrationModalProps) {
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [rif, setRif] = useState('');
-  // const [password, setPassword] = useState('');
-  // const [showPassword, setShowPassword] = useState(false);
-  const { signUp, loading, error } = useRegistration();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const { inviteSupplier } = useCreateProvider();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCreateProvider = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = await signUp(email, 'password', fullName);
-    if (result) {
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log('hola')
+      await inviteSupplier({ email, fullName, rif });
+      
+      // Limpiar formulario
+      setEmail('');
+      setFullName('');
+      setRif('');
+      
       onProviderRegistered();
       onClose();
+    } catch (err: any) {
+      console.error('❌ Error:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Registrar Nuevo Proveedor">
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+    <Modal isOpen={isOpen} onClose={onClose} title="Invitar Nuevo Proveedor">
+      <form className="flex flex-col gap-4" onSubmit={handleCreateProvider}>
         {error && (
           <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-md">
             {error}
@@ -49,7 +65,7 @@ export default function UserRegistrationModal({
         <Input
           type="email"
           label="Correo electrónico"
-          placeholder="admin@empresa.com"
+          placeholder="proveedor@empresa.com"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -57,37 +73,23 @@ export default function UserRegistrationModal({
 
         <Input
           type="text"
-          label="Rif"
+          label="RIF"
           placeholder="J-12345678-9"
           required
           value={rif}
-          onChange={(e) => setRif(e.target.value)}
+          onChange={(e) => setRif(e.target.value.toUpperCase())}
         />
 
-        {/* <Input
-          type={showPassword ? 'text' : 'password'}
-          label="Contraseña"
-          placeholder="Mínimo 6 caracteres"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          rightIcon={
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="text-neutral-400 hover:text-neutral-600 focus:outline-none"
-            >
-              {showPassword ? <OpenEyeIcon /> : <CloseEyeIcon />}
-            </button>
-          }
-        /> */}
+        <div className="p-3 text-sm text-blue-600 bg-blue-50 border border-blue-100 rounded-md">
+          ℹ️ Se enviará un correo de invitación al proveedor para que configure su contraseña
+        </div>
 
         <div className="flex justify-end gap-4 mt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
           <Button type="submit" variant="primary" isLoading={loading}>
-            Registrar
+            Enviar Invitación
           </Button>
         </div>
       </form>

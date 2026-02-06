@@ -89,7 +89,7 @@ export default function HomePage() {
               description="Visualiza, crea y gestiona el historial de facturación."
               icon={ReceiptIcon}
               color="green"
-              onClick={() => navigate('/invoices')}
+              onClick={() => navigate('/bills')}
             />
           </div>
         </div>
