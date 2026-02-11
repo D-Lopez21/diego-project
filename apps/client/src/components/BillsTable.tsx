@@ -1,9 +1,32 @@
 import { useGetAllBills } from '../hooks/useGetAllBills';
 import { EditIcon, TrashIcon } from './icons';
 
+interface BillsTableProps {
+  searchTerm: string;
+  filterType: 'number' | 'provider' | 'lot';
+}
 
-export default function BillsTable() {
+export default function BillsTable({ searchTerm, filterType }: BillsTableProps) {
   const { bills, loading, error, getProviderName, deleteBill } = useGetAllBills();
+
+  // Lógica de filtrado reactivo
+  const filteredBills = bills.filter((bill) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+
+    switch (filterType) {
+      case 'number':
+        return bill.n_billing?.toLowerCase().includes(term);
+      case 'provider':
+        const providerName = getProviderName(bill.suppliers_id).toLowerCase();
+        return providerName.includes(term);
+      case 'lot':
+        // Ahora el filtro de 'lot' busca exclusivamente en la Nomenclatura
+        return bill.nomenclature_pile?.toLowerCase().includes(term);
+      default:
+        return true;
+    }
+  });
 
   const handleDelete = async (id: string) => {
     if (confirm('¿Estás seguro de eliminar esta factura?')) {
@@ -15,7 +38,6 @@ export default function BillsTable() {
   };
 
   function onEditBill(billId: string) {
-    // Navegar a la página de detalles de la factura
     window.location.href = `/bills/${billId}`;
   }
 
@@ -37,26 +59,28 @@ export default function BillsTable() {
             <tr>
               <th className="px-6 py-4 font-semibold">N° Factura</th>
               <th className="px-6 py-4 font-semibold">Proveedor</th>
-              <th className="px-6 py-4 font-semibold">N° Siniestro</th>
+              <th className="px-6 py-4 font-semibold">Nomenclatura Lote</th>
               <th className="px-6 py-4 font-semibold">Estado</th>
               <th className="px-6 py-4 font-semibold">Total</th>
               <th className="px-6 py-4 font-semibold">Moneda</th>
-              <th className="px-6 py-4 font-semibold">Estado</th>
+              <th className="px-6 py-4 font-semibold">Activo</th>
               <th className="px-6 py-4 text-right font-semibold">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
-            {bills.length === 0 ? (
+            {filteredBills.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={8} // Ajustado a 8 columnas totales
                   className="px-6 py-10 text-center text-neutral-400"
                 >
-                  No hay facturas registradas.
+                  {searchTerm 
+                    ? `No se encontraron resultados para "${searchTerm}"` 
+                    : "No hay facturas registradas."}
                 </td>
               </tr>
             ) : (
-              bills.map((bill) => (
+              filteredBills.map((bill) => (
                 <tr
                   key={bill.id}
                   className="hover:bg-neutral-50/50 transition-colors"
@@ -79,9 +103,10 @@ export default function BillsTable() {
                       </div>
                     )}
                   </td>
+                  {/* COLUMNA NOMENCLATURA LOTE */}
                   <td className="px-6 py-4">
-                    <span className="text-neutral-700">
-                      {bill.n_claim || '-'}
+                    <span className="inline-flex items-center rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 border border-blue-100">
+                      {bill.nomenclature_pile || 'N/A'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -105,15 +130,11 @@ export default function BillsTable() {
                       {bill.state || 'Sin estado'}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className="font-medium text-neutral-900">
-                      {bill.total_billing || '-'}
-                    </span>
+                  <td className="px-6 py-4 font-medium text-neutral-900">
+                    {bill.total_billing || '0.00'}
                   </td>
-                  <td className="px-6 py-4">
-                    <span className="text-neutral-700">
-                      {bill.currency_type || '-'}
-                    </span>
+                  <td className="px-6 py-4 text-neutral-700">
+                    {bill.currency_type || '-'}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1.5">
@@ -128,22 +149,22 @@ export default function BillsTable() {
                       <button
                         title="Editar"
                         onClick={() => onEditBill(bill.id)}
-                        className="rounded p-1 hover:bg-neutral-100 text-neutral-500 hover:text-blue-600"
+                        className="rounded p-1 hover:bg-neutral-100 text-neutral-500 hover:text-blue-600 transition-colors"
                       >
                         <EditIcon />
                       </button>
                       <button
                         title="Eliminar"
                         onClick={() => handleDelete(bill.id)}
-                        className="rounded p-1 hover:bg-neutral-100 text-neutral-500 hover:text-red-600"
+                        className="rounded p-1 hover:bg-neutral-100 text-neutral-500 hover:text-red-600 transition-colors"
                       >
                         <TrashIcon />
                       </button>
                     </div>
                   </td>
                 </tr>
-              ))
-            )}
+              )
+            ))}
           </tbody>
         </table>
       </div>

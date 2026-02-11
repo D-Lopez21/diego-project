@@ -96,16 +96,6 @@ export default function SignInPage() {
             Entrar
           </Button>
         </form>
-
-        <p className="pt-6 text-sm text-neutral-600">
-          ¿No tienes una cuenta?{' '}
-          <a
-            href="/sign-up"
-            className="underline font-medium text-blue-600 hover:text-blue-700"
-          >
-            Regístrate
-          </a>
-        </p>
       </div>
     </div>
   );

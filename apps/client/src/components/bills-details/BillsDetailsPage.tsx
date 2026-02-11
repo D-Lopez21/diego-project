@@ -1,7 +1,5 @@
-// Archivo: BillsDetailsPage.tsx
-// Copiar este contenido completo
 import React from 'react';
-import { useNavigate } from 'react-router-dom'; // Importante para la redirección tras crear
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { DashboardLayout, TabSelector } from '../common';
 import type {
@@ -24,7 +22,6 @@ import AuditSection from './AuditSection';
 import LiquidationSection from './LiquidationSection';
 import ReceptionSection from './ReceptionSection';
 
-// Utility para inputs de tipo date
 const formatDateForInput = (dateString: string | null) => {
   if (!dateString) return '';
   return dateString.split('T')[0];
@@ -38,7 +35,7 @@ export default function BillsDetailsPage({
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = React.useState<SectionId>('recepcion');
   const { providers } = useGetAllProviders();
-  const { users: allUsers } = useGetAllUsers(); // Todos los usuarios para mostrar valores
+  const { users: allUsers } = useGetAllUsers();
   const { users: analysts } = useGetAllUsersFiltered('recepcion');
   const { users: analystsLiquidadores } = useGetAllUsersFiltered('liquidacion');
   const { users: auditores } = useGetAllUsersFiltered('auditoria');
@@ -46,65 +43,11 @@ export default function BillsDetailsPage({
   const { users: pagadores } = useGetAllUsersFiltered('pagos');
   const { users: finiquitadores } = useGetAllUsersFiltered('finiquito');
 
-  // Estado para el rol del usuario actual
   const [currentUserRole, setCurrentUserRole] = React.useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
-
-  // Cargar rol del usuario actual
-  React.useEffect(() => {
-    const loadCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setCurrentUserId(user.id);
-        // Obtener el rol del perfil
-        const { data: profile } = await supabase
-          .from('profile')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        
-        if (profile) {
-          setCurrentUserRole(profile.role);
-          console.log('👤 Usuario actual - Rol:', profile.role);
-        }
-      }
-    };
-    loadCurrentUser();
-  }, []);
-
-  // Función para verificar permisos de edición
-  const canEditSection = (section: SectionId): boolean => {
-    if (!currentUserRole) return false;
-    
-    // Admin puede editar todo
-    if (currentUserRole === 'admin') return true;
-    
-    // Mapeo de secciones a roles permitidos
-    const sectionRoleMap: Record<SectionId, string[]> = {
-      recepcion: ['recepcion'],
-      liquidacion: ['liquidacion'],
-      auditoria: ['auditoria'],
-      programacion: ['admin', 'programacion'], // Admin o programacion
-      ejecucion: ['pagos'],
-      finiquito: ['finiquito'],
-    };
-    
-    return sectionRoleMap[section]?.includes(currentUserRole) || false;
-  };
-
-  // DEBUG: Check what hooks are returning
-  React.useEffect(() => {
-    console.log('🔍 BillsDetailsPage - Hooks data:');
-    console.log('  providers:', providers);
-    console.log('  analysts (recepcion):', analysts);
-    console.log('  analystsLiquidadores:', analystsLiquidadores);
-    console.log('  auditores:', auditores);
-  }, [providers, analysts, analystsLiquidadores, auditores]);
-
   const [currentBill, setCurrentBill] = React.useState<Bill | null>(null);
   const [loading, setLoading] = React.useState(false);
 
-  // --- ESTADOS DE LOS FORMULARIOS (TUS ORIGINALES) ---
+  // --- ESTADOS DE FORMULARIOS ---
   const [recepcionData, setRecepcionData] = React.useState<RecepcionData>({
     arrival_date: '',
     suppliers_id: '',
@@ -158,18 +101,44 @@ export default function BillsDetailsPage({
     analyst_finiquito: '',
   });
 
-  // --- CARGA DE DATOS ---
+  React.useEffect(() => {
+    const loadCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profile')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        if (profile) setCurrentUserRole(profile.role);
+      }
+    };
+    loadCurrentUser();
+  }, []);
+
+  const canEditSection = (section: SectionId): boolean => {
+    if (!currentUserRole) return false;
+    if (currentUserRole === 'admin') return true;
+    const sectionRoleMap: Record<SectionId, string[]> = {
+      recepcion: ['recepcion'],
+      liquidacion: ['liquidacion'],
+      auditoria: ['auditoria'],
+      programacion: ['programacion'],
+      ejecucion: ['pagos'],
+      finiquito: ['finiquito'],
+    };
+    return sectionRoleMap[section]?.includes(currentUserRole) || false;
+  };
+
   const loadBillData = async (id: string) => {
     if (!id || id === 'create-bill') return;
     try {
       setLoading(true);
       const { data, error } = await supabase.from('bills').select('*').eq('id', id).single();
-
       if (error) throw error;
 
       if (data) {
         setCurrentBill(data);
-        // Sincronización con nombres de columnas reales de Supabase
         setRecepcionData({
           arrival_date: formatDateForInput(data.arrival_date),
           suppliers_id: data.suppliers_id || '',
@@ -204,7 +173,7 @@ export default function BillsDetailsPage({
         setProgramacionData({
           fecha_programacion: data.programmed_date ? formatDateForInput(data.programmed_date) : '',
           decision_adm: data.admin_decision || '',
-          analyst_programador: data.analyst_paid || '', // Ajusta si tienes otro campo
+          analyst_programador: data.analyst_paid || '', 
         });
 
         setEjecucionData({
@@ -236,55 +205,98 @@ export default function BillsDetailsPage({
     }
   }, [billId]);
 
-  // --- GUARDADO DE SECCIONES (AJUSTADO) ---
+  // --- MANEJADOR DE GUARDADO ---
   const handleSaveSection = async (section: string, data: any) => {
     try {
       setLoading(true);
       const isCreating = !billId || billId === 'create-bill';
 
-      if (isCreating && section === 'recepcion') {
-        const { data: newBill, error } = await supabase
+      if (section === 'recepcion') {
+        const amount = parseFloat(data.total_billing);
+        if (isNaN(amount) || amount <= 0) {
+          alert('Error: El monto total debe ser mayor a 0.');
+          setLoading(false);
+          return;
+        }
+
+        // Validación de Unicidad N° Siniestro
+        const { data: dupClaim } = await supabase
           .from('bills')
-          .insert([
-            {
-              arrival_date: data.arrival_date || new Date().toISOString(),
-              suppliers_id: data.suppliers_id || null,
-              n_claim: data.n_claim || '',
-              type: data.type === 'DNF' ? 'DNF' : 'FACTURA',
-              n_billing: data.n_billing || '',
-              n_control: data.n_control || '',
-              currency_type: data.currency_type === 'USD' ? 'USD' : 'VES',
-              total_billing: data.total_billing ? parseFloat(data.total_billing) : 0,
-              analyst_receptor_id: data.analyst_receptor_id || null,
-              state: 'recibida',
-              state_sequence: 'recepcion',
-              active: true,
-            },
-          ])
-          .select()
-          .single();
+          .select('id')
+          .eq('n_claim', data.n_claim)
+          .neq('id', billId || '')
+          .maybeSingle();
 
-        if (error) throw error;
-        alert('Factura creada exitosamente');
-        navigate(`/bills/${newBill.id}`, { replace: true });
+        if (dupClaim) {
+          alert(`Error: El N° de Siniestro "${data.n_claim}" ya está registrado.`);
+          setLoading(false);
+          return;
+        }
 
+        // Validación de Unicidad N° Factura por Proveedor
+        const { data: dupBill } = await supabase
+          .from('bills')
+          .select('id')
+          .eq('n_billing', data.n_billing)
+          .eq('suppliers_id', data.suppliers_id)
+          .neq('id', billId || '')
+          .maybeSingle();
+
+        if (dupBill) {
+          alert(`Error: La factura N° "${data.n_billing}" ya existe para este proveedor.`);
+          setLoading(false);
+          return;
+        }
+
+        if (isCreating) {
+          const { data: newBill, error } = await supabase
+            .from('bills')
+            .insert([{
+                arrival_date: data.arrival_date || new Date().toISOString(),
+                suppliers_id: data.suppliers_id || null,
+                n_claim: data.n_claim || '',
+                type: data.type === 'DNF' ? 'DNF' : 'FACTURA',
+                n_billing: data.n_billing || '',
+                n_control: data.n_control || '',
+                currency_type: data.currency_type === 'USD' ? 'USD' : 'VES',
+                total_billing: amount,
+                analyst_receptor_id: data.analyst_receptor_id || null,
+                state: 'recibida', // Valor exacto de tu ENUM state_bill_type
+                state_sequence: 'recepcion', // Valor exacto de tu ENUM state_sequence_type
+                active: true,
+            }])
+            .select().single();
+
+          if (error) throw error;
+          alert('Factura creada exitosamente');
+          navigate(`/bills/${newBill.id}`, { replace: true });
+        } else {
+          const { error } = await supabase
+            .from('bills')
+            .update({
+                arrival_date: data.arrival_date,
+                suppliers_id: data.suppliers_id,
+                n_claim: data.n_claim,
+                type: data.type === 'DNF' ? 'DNF' : 'FACTURA',
+                n_billing: data.n_billing,
+                n_control: data.n_control,
+                currency_type: data.currency_type,
+                total_billing: amount,
+                analyst_receptor_id: data.analyst_receptor_id,
+                state: 'recibida',
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', billId);
+
+          if (error) throw error;
+          alert('Sección RECEPCION actualizada');
+          await loadBillData(billId);
+        }
       } else if (!isCreating && billId) {
         let updatePayload = {};
 
-        // Mapeamos según la sección activa para actualizar solo lo necesario
-        if (section === 'recepcion') {
-          updatePayload = {
-            arrival_date: data.arrival_date,
-            suppliers_id: data.suppliers_id,
-            n_claim: data.n_claim,
-            type: data.type === 'DNF' ? 'DNF' : 'FACTURA',
-            n_billing: data.n_billing,
-            n_control: data.n_control,
-            currency_type: data.currency_type,
-            total_billing: parseFloat(data.total_billing),
-            analyst_receptor_id: data.analyst_receptor_id,
-          };
-        } else if (section === 'liquidacion') {
+        // Mapeo dinámico según la sección seleccionada
+        if (section === 'liquidacion') {
           updatePayload = {
             severance_date: data.fecha_liquidacion || null,
             claim_type: data.tipo_siniestro || null,
@@ -292,17 +304,17 @@ export default function BillsDetailsPage({
             gna: parseFloat(data.gna) || 0,
             medical_honoraries: parseFloat(data.honorarios_medic) || 0,
             clinical_services: parseFloat(data.servicios_clinicos) || 0,
-            // retention_rate se calcula automáticamente en Supabase (total_billing * 0.05)
-            // NO incluir retention_rate aquí para evitar el error de actualización
             indemnizable_rate: parseFloat(data.monto_indemniz) || 0,
             nomenclature_pile: data.nomenclature_pile || null,
             analyst_severance: data.analyst_liquidador || null,
+            state: 'pendiente', // Siguiente estado lógico en tu ENUM
             state_sequence: 'liquidacion',
           };
         } else if (section === 'auditoria') {
           updatePayload = {
             audit_date: data.fecha_auditoria || null,
             auditor: data.auditor || null,
+            state: 'pendiente',
             state_sequence: 'auditoria',
           };
         } else if (section === 'programacion') {
@@ -310,44 +322,39 @@ export default function BillsDetailsPage({
             programmed_date: data.fecha_programacion || null,
             admin_decision: data.decision_adm || null,
             analyst_paid: data.analyst_programador || null,
-            state: 'programado', // Estado de la factura
-            state_sequence: 'programacion', // Flujo del proceso
+            state: 'programado', // Valor exacto de tu ENUM state_bill_type
+            state_sequence: 'programacion',
           };
         } else if (section === 'ejecucion') {
           updatePayload = {
             paid_date: data.fecha_pago || null,
-            bs_amount: data.monto_bs ? parseFloat(data.monto_bs) : 0,
-            tcr_amount: data.tcr ? parseFloat(data.tcr) : 0,
-            dollar_amount: data.ref_en_dolares ? parseFloat(data.ref_en_dolares) : 0,
+            bs_amount: parseFloat(data.monto_bs) || 0,
+            tcr: parseFloat(data.tcr) || 0,
+            dollar_amount: parseFloat(data.ref_en_dolares) || 0,
             transfer_ref: data.ref_bancaria || null,
-            vertice_difference: data.diferencia_vertice ? parseFloat(data.diferencia_vertice) : 0,
-            provider_difference: data.diferencia_proveedor ? parseFloat(data.diferencia_proveedor) : 0,
+            vertice_difference: parseFloat(data.diferencia_vertice) || 0,
+            provider_difference: parseFloat(data.diferencia_proveedor) || 0,
             analyst_paid: data.analyst_pagador || null,
-            state: 'pagado', // Estado de la factura
-            state_sequence: 'pagos', // Flujo del proceso (es 'pagos' no 'ejecucion')
+            state: 'pagado', // Valor exacto de tu ENUM state_bill_type
+            state_sequence: 'pagos', // Valor exacto de tu ENUM state_sequence_type
           };
         } else if (section === 'finiquito') {
           updatePayload = {
             settlement_date: data.fecha_envio || null,
             analyst_settlement: data.analyst_finiquito || null,
-            state_sequence: 'finiquito', // Flujo del proceso
+            state: 'pagado',
+            state_sequence: 'finiquito',
           };
         }
-        // ...
 
         const { error } = await supabase
           .from('bills')
-          .update({
-            ...updatePayload,
-            updated_at: new Date().toISOString(),
-          })
+          .update({ ...updatePayload, updated_at: new Date().toISOString() })
           .eq('id', billId);
 
         if (error) throw error;
         alert(`Sección ${section.toUpperCase()} guardada exitosamente`);
         await loadBillData(billId);
-      } else {
-        alert('Primero debes crear la factura en la sección de RECEPCION');
       }
     } catch (error: any) {
       alert('Error al guardar: ' + error.message);
