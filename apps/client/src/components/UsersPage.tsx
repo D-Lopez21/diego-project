@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, DashboardLayout, Input } from './common';
+import { Button, DashboardLayout} from './common';
 import { PlusIcon } from './icons';
 import UsersTable from './UsersTable';
 import UserRegistrationModal from './UserRegistrationModal';
