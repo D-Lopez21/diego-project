@@ -159,23 +159,21 @@ export default function ReceptionSection({
   <label className="block text-sm font-medium text-gray-700 mb-1">
     Monto Total Facturado
   </label>
-  <div className="relative">
+  <div className="relative flex items-center"> {/* Agregamos flex e items-center aquí */}
     <input
       type="text"
       placeholder="0,00"
       disabled={isReadOnly}
-      // Mostramos el valor formateado cuando no tiene el foco
       value={isReadOnly ? formatCurrency(data.total_billing) : data.total_billing}
       onChange={(e) => {
-        // Permitimos solo números y un punto decimal
         const val = e.target.value.replace(/[^0-9.]/g, '');
         setData({ ...data, total_billing: val });
       }}
-      className={`w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg outline-none transition-all
+      className={`w-full px-4 py-2.5 pr-12 bg-white border border-slate-200 rounded-lg outline-none transition-all
         ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'focus:ring-2 focus:ring-blue-500'}
-        appearance-none`} // La clase que quita las flechas
+        appearance-none`}
     />
-    <span className="absolute right-3 top-2.5 text-xs font-bold text-slate-400 uppercase">
+    <span className="absolute right-3 flex items-center pointer-events-none text-xs font-bold text-slate-400 uppercase">
       {data.currency_type}
     </span>
   </div>
