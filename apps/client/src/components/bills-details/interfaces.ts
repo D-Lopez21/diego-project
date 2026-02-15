@@ -80,12 +80,12 @@ export interface Bill {
   retention_rate?: string;
   monto_indemniz?: string;
   nomenclature_pile?: string;
-  analyst_liquidador?: string;
+  analyst_severance?: string;
   fecha_auditoria?: string;
   auditor?: string;
   fecha_programacion?: string;
   decision_adm?: string;
-  analyst_programador?: string;
+  analyst_schedule?: string;
   fecha_pago?: string;
   monto_bs?: string;
   tcr?: string;
@@ -95,7 +95,7 @@ export interface Bill {
   diferencia_proveedor?: string;
   analyst_pagador?: string;
   fecha_envio?: string;
-  analyst_finiquito?: string;
+  analyst_paid?: string;
   state?: string;
   active: boolean;
   created_at?: string;

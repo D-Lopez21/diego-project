@@ -1,39 +1,105 @@
 import React from 'react';
-import { Button, DashboardLayout, Input } from './common';
-import { PlusIcon } from './icons';
+import { DashboardLayout } from './common';
 import { ProviderRegistrationModal, ProvidersTable } from './providers';
+import { useGetAllProviders } from '../hooks/useGetAllProviders';
+import type { Profile } from '../contexts/AuthContext';
 
 export default function ProvidersPage() {
-  const [modalIsOpen, setModalIsOpen] = React.useState(false);
+  const { providers, loading, updateProvider, deleteProvider, refetch } =
+    useGetAllProviders();
 
-  const handleProviderRegistered = () => {
-    // La tabla se actualiza sola gracias a la suscripción de Supabase
-    setModalIsOpen(false);
+  const [modalIsOpen, setModalIsOpen] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [providerToEdit, setProviderToEdit] = React.useState<Profile | null>(
+    null
+  );
+
+  const handleEdit = (provider: Profile) => {
+    setProviderToEdit(provider);
+    setModalIsOpen(true);
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (window.confirm(`¿Seguro que deseas eliminar a ${name}?`)) {
+      try {
+        await deleteProvider(id);
+      } catch (error) {
+        console.error('Error al eliminar:', error);
+      }
+    }
   };
 
   return (
     <DashboardLayout title="Gestión de Proveedores" returnTo="/">
-      <div id="header-actions" className="w-full flex justify-end">
-        {/* TODO: Implement search functionality */}
-        <Input
-          type="search"
-          placeholder="Buscar proveedor..."
-          className="mr-4 max-w-sm"
-        />
-        <Button
-          icon={<PlusIcon className="size-6" />}
-          className="mb-4 justify-start gap-2"
-          onClick={() => setModalIsOpen(true)}
-        >
-          Nuevo Proveedor
-        </Button>
-      </div>
-      <ProvidersTable />
+      {/* SECCIÓN DE BOTÓN Y FILTRO (Actualizada para que coincida con tu imagen) */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+        {/* Input de Búsqueda estilizado */}
+        <div className="flex bg-white border border-neutral-200 rounded-lg p-1 shadow-sm w-full sm:w-auto">
+          <div className="flex items-center px-3 text-neutral-400">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+          <input
+            type="text"
+            placeholder="Buscar proveedor o RIF..."
+            className="text-sm px-2 py-1.5 outline-none w-full sm:w-80"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
 
+        {/* Botón Nuevo Proveedor */}
+        <button
+          onClick={() => {
+            setProviderToEdit(null);
+            setModalIsOpen(true);
+          }}
+          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all duration-200"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2.5}
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+          <span>Nuevo Proveedor</span>
+        </button>
+      </div>
+
+      {/* Tabla de Proveedores */}
+      <ProvidersTable
+        providers={providers}
+        loading={loading}
+        searchTerm={searchTerm}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
+
+      {/* Modal */}
       <ProviderRegistrationModal
         isOpen={modalIsOpen}
         onClose={() => setModalIsOpen(false)}
-        onProviderRegistered={handleProviderRegistered}
+        providerToEdit={providerToEdit}
+        onUpdate={updateProvider}
+        onProviderRegistered={refetch}
       />
     </DashboardLayout>
   );

@@ -4,9 +4,11 @@ import { supabase } from '../lib/supabase';
 import React from 'react';
 
 export interface Profile {
-  name: string;
   id: string;
-  role: 'admin' | 'user' | 'auditoria' | 'proveedor'; // 👈 Agrega todos tus roles
+  name: string;
+  email: string; // 👈 Agregado para solucionar error de email (image_1d1576)
+  role: 'admin' | 'recepcion' | 'liquidacion' | 'auditoria' | 'programacion' | 'pagos' | 'finiquito' | 'proveedor' | 'user'; 
+  rif: string | null; // 👈 Agregado para solucionar error de rif (image_1cb3c0, image_1d1844)
   suppliers_id: string | null;
   password_change_required: boolean;
   active: boolean;

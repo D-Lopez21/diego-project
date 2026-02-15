@@ -1,111 +1,74 @@
-import { useGetAllProviders } from "../../hooks/useGetAllProviders";
-import { EditIcon, TrashIcon } from "../icons";
+import { EditIcon, TrashIcon } from '../icons';
+import type { Profile } from '../../contexts/AuthContext';
 
+interface ProvidersTableProps {
+  providers: Profile[]; // Recibe los datos del padre
+  loading: boolean;     // Recibe el estado de carga
+  searchTerm: string;
+  onEdit: (provider: Profile) => void;
+  onDelete: (id: string, name: string) => void;
+}
 
-export default function ProvidersTable() {
-  const { providers, loading, error } = useGetAllProviders();
+export default function ProvidersTable({ 
+  providers, 
+  loading, 
+  searchTerm, 
+  onEdit, 
+  onDelete 
+}: ProvidersTableProps) {
 
-  if (loading)
-    return (
-      <div className="py-10 text-center text-neutral-500">
-        Cargando proveedores...
-      </div>
-    );
+  // Ya no llamamos al hook aquí. Usamos los proveedores que llegan por props.
+  const filteredProviders = (providers || []).filter((provider) =>
+    provider.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (provider.rif && provider.rif.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
-  if (error)
-    return <div className="py-10 text-center text-red-500">Error: {error}</div>;
+  if (loading) return <div className="py-10 text-center text-neutral-500 italic">Cargando proveedores...</div>;
 
   return (
     <div className="w-full overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm text-neutral-600">
-          <thead className="bg-neutral-50 text-xs uppercase text-neutral-500">
+          <thead className="bg-neutral-50 text-xs uppercase text-neutral-500 font-semibold">
             <tr>
-              <th className="px-6 py-4 font-semibold">Nombre</th>
-              <th className="px-6 py-4 font-semibold">RIF</th>
-              <th className="px-6 py-4 font-semibold">Rol</th>
-              <th className="px-6 py-4 font-semibold">Estado</th>
-              <th className="px-6 py-4 font-semibold">Cambio Pass</th>
-              <th className="px-6 py-4 text-right font-semibold">Acciones</th>
+              <th className="px-6 py-4">Nombre</th>
+              <th className="px-6 py-4">RIF</th>
+              <th className="px-6 py-4">Estado</th>
+              <th className="px-6 py-4 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
-            {providers.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="px-6 py-10 text-center text-neutral-400"
-                >
-                  No hay proveedores registrados.
-                </td>
-              </tr>
-            ) : (
-              providers.map((provider) => (
-                <tr
-                  key={provider.id}
-                  className="hover:bg-neutral-50/50 transition-colors"
-                >
+            {filteredProviders.length > 0 ? (
+              filteredProviders.map((provider) => (
+                <tr key={provider.id} className="hover:bg-neutral-50/50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-neutral-900">{provider.name}</td>
                   <td className="px-6 py-4">
-                    <div className="font-medium text-neutral-900">
-                      {provider?.name || 'Sin nombre'}
-                    </div>
-                    <div className="text-xs text-neutral-400">
-                      {provider.id.slice(0, 8)}...
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="font-mono text-neutral-700">
-                      {provider?.rif || 'N/A'}
+                    <span className="font-mono text-neutral-700 bg-neutral-100 px-1.5 py-0.5 rounded text-xs">
+                      {provider.rif || 'N/A'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        provider.role === 'admin'
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'bg-blue-100 text-blue-700'
-                      }`}
-                    >
-                      {provider.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1.5">
-                      <div
-                        className={`h-2 w-2 rounded-full ${provider.active ? 'bg-green-500' : 'bg-neutral-300'}`}
-                      />
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <div className={`h-2 w-2 rounded-full ${provider.active ? 'bg-green-500' : 'bg-neutral-300'}`} />
                       {provider.active ? 'Activo' : 'Inactivo'}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    {provider.password_change_required ? (
-                      <span className="text-orange-600 text-xs font-medium italic">
-                        Pendiente
-                      </span>
-                    ) : (
-                      <span className="text-green-600 text-xs italic">
-                        Al día
-                      </span>
-                    )}
-                  </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <button
-                        title="Editar"
-                        className="rounded p-1 hover:bg-neutral-100 text-neutral-500 hover:text-blue-600"
-                      >
-                        <EditIcon />
+                      <button onClick={() => onEdit(provider)} className="p-1.5 hover:bg-blue-50 rounded-lg text-neutral-400 hover:text-blue-600 transition-colors">
+                        <EditIcon className="size-5" />
                       </button>
-                      <button
-                        title="Eliminar"
-                        className="rounded p-1 hover:bg-neutral-100 text-neutral-500 hover:text-red-600"
-                      >
-                        <TrashIcon />
+                      <button onClick={() => onDelete(provider.id, provider.name || '')} className="p-1.5 hover:bg-red-50 rounded-lg text-neutral-400 hover:text-red-600 transition-colors">
+                        <TrashIcon className="size-5" />
                       </button>
                     </div>
                   </td>
                 </tr>
               ))
+            ) : (
+              <tr>
+                <td colSpan={4} className="px-6 py-10 text-center text-neutral-400">No se encontraron proveedores.</td>
+              </tr>
             )}
           </tbody>
         </table>

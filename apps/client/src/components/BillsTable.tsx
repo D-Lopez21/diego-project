@@ -1,143 +1,81 @@
-import { useGetAllBills } from '../hooks/useGetAllBills';
 import { EditIcon, TrashIcon } from './icons';
 
+interface BillsTableProps {
+  bills: any[];
+  loading: boolean;
+  error: string | null;
+  searchTerm: string;
+  filterType: 'number' | 'provider' | 'lot';
+  getProviderName: (id: string) => string;
+  onDelete: (id: string) => void;
+}
 
-export default function BillsTable() {
-  const { bills, loading, error, getProviderName, deleteBill } = useGetAllBills();
+export default function BillsTable({ 
+  bills, loading, error, searchTerm, filterType, getProviderName, onDelete 
+}: BillsTableProps) {
 
-  const handleDelete = async (id: string) => {
-    if (confirm('¿Estás seguro de eliminar esta factura?')) {
-      const success = await deleteBill(id);
-      if (!success) {
-        alert('Error al eliminar la factura');
-      }
+  const filteredBills = bills.filter((bill) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+
+    switch (filterType) {
+      case 'number': return bill.n_billing?.toLowerCase().includes(term);
+      case 'provider': return getProviderName(bill.suppliers_id).toLowerCase().includes(term);
+      case 'lot': return bill.nomenclature_pile?.toLowerCase().includes(term);
+      default: return true;
     }
-  };
+  });
 
-  function onEditBill(billId: string) {
-    // Navegar a la página de detalles de la factura
-    window.location.href = `/bills/${billId}`;
-  }
-
-  if (loading)
-    return (
-      <div className="py-10 text-center text-neutral-500">
-        Cargando facturas...
-      </div>
-    );
-
-  if (error)
-    return <div className="py-10 text-center text-red-500">Error: {error}</div>;
+  if (loading) return <div className="py-10 text-center text-neutral-500 italic">Cargando facturas...</div>;
+  if (error) return <div className="py-10 text-center text-red-500">Error: {error}</div>;
 
   return (
     <div className="w-full overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm text-neutral-600">
-          <thead className="bg-neutral-50 text-xs uppercase text-neutral-500">
+          <thead className="bg-neutral-50 text-xs uppercase text-neutral-500 font-semibold">
             <tr>
-              <th className="px-6 py-4 font-semibold">N° Factura</th>
-              <th className="px-6 py-4 font-semibold">Proveedor</th>
-              <th className="px-6 py-4 font-semibold">N° Siniestro</th>
-              <th className="px-6 py-4 font-semibold">Estado</th>
-              <th className="px-6 py-4 font-semibold">Total</th>
-              <th className="px-6 py-4 font-semibold">Moneda</th>
-              <th className="px-6 py-4 font-semibold">Estado</th>
-              <th className="px-6 py-4 text-right font-semibold">Acciones</th>
+              <th className="px-6 py-4">N° Factura</th>
+              <th className="px-6 py-4">Proveedor</th>
+              <th className="px-6 py-4">Lote</th>
+              <th className="px-6 py-4">Estado</th>
+              <th className="px-6 py-4 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
-            {bills.length === 0 ? (
+            {filteredBills.length === 0 ? (
               <tr>
-                <td
-                  colSpan={8}
-                  className="px-6 py-10 text-center text-neutral-400"
-                >
-                  No hay facturas registradas.
-                </td>
+                <td colSpan={5} className="px-6 py-10 text-center text-neutral-400">No hay facturas.</td>
               </tr>
             ) : (
-              bills.map((bill) => (
-                <tr
-                  key={bill.id}
-                  className="hover:bg-neutral-50/50 transition-colors"
-                >
+              filteredBills.map((bill) => (
+                <tr key={bill.id} className="hover:bg-neutral-50/50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-neutral-900">{bill.n_billing || 'S/N'}</td>
+                  <td className="px-6 py-4">{getProviderName(bill.suppliers_id)}</td>
                   <td className="px-6 py-4">
-                    <div className="font-medium text-neutral-900">
-                      {bill.n_billing || 'Sin N°'}
-                    </div>
-                    <div className="text-xs text-neutral-400">
-                      {bill.id.slice(0, 8)}...
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="font-medium text-neutral-900">
-                      {getProviderName(bill.suppliers_id)}
-                    </div>
-                    {bill.suppliers_id && (
-                      <div className="text-xs text-neutral-400">
-                        {bill.suppliers_id.slice(0, 8)}...
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-neutral-700">
-                      {bill.n_claim || '-'}
+                    <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100 font-medium">
+                      {bill.nomenclature_pile || 'N/A'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        bill.state === 'Recepción'
-                          ? 'bg-pink-100 text-pink-700'
-                          : bill.state === 'Liquidación'
-                            ? 'bg-green-100 text-green-700'
-                            : bill.state === 'Auditoría'
-                              ? 'bg-orange-100 text-orange-700'
-                              : bill.state === 'Programación'
-                                ? 'bg-blue-100 text-blue-700'
-                                : bill.state === 'Ejecución'
-                                  ? 'bg-yellow-100 text-yellow-700'
-                                  : bill.state === 'Finiquito'
-                                    ? 'bg-purple-100 text-purple-700'
-                                    : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {bill.state || 'Sin estado'}
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium 
+                      ${bill.state === 'Liquidación' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                      {bill.state || 'Recibido'}
                     </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="font-medium text-neutral-900">
-                      {bill.total_billing || '-'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-neutral-700">
-                      {bill.currency_type || '-'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1.5">
-                      <div
-                        className={`h-2 w-2 rounded-full ${bill.active ? 'bg-green-500' : 'bg-neutral-300'}`}
-                      />
-                      {bill.active ? 'Activo' : 'Inactivo'}
-                    </div>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <button
-                        title="Editar"
-                        onClick={() => onEditBill(bill.id)}
-                        className="rounded p-1 hover:bg-neutral-100 text-neutral-500 hover:text-blue-600"
+                      <button 
+                        onClick={() => window.location.href = `/bills/${bill.id}`}
+                        className="p-1.5 text-neutral-400 hover:text-blue-600 transition-colors"
                       >
-                        <EditIcon />
+                        <EditIcon className="size-5" />
                       </button>
-                      <button
-                        title="Eliminar"
-                        onClick={() => handleDelete(bill.id)}
-                        className="rounded p-1 hover:bg-neutral-100 text-neutral-500 hover:text-red-600"
+                      <button 
+                        onClick={() => onDelete(bill.id)} 
+                        className="p-1.5 text-neutral-400 hover:text-red-600 transition-colors"
                       >
-                        <TrashIcon />
+                        <TrashIcon className="size-5" />
                       </button>
                     </div>
                   </td>
