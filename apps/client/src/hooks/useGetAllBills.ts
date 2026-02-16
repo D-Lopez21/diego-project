@@ -17,15 +17,14 @@ export function useGetAllBills() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // --- REFETCH SEGURO ---
+  // --- REFETCH BLINDADO ---
   const refetch = React.useCallback(async () => {
-    // Si ya hay facturas cargadas, NO mostramos el texto de "Cargando..."
-    // Esto evita que la pantalla se quede en blanco si el refetch tarda.
+    // Si ya hay facturas, no bloqueamos la UI con el loader
     if (bills.length === 0) setLoading(true);
     setError(null);
     
     try {
-      console.log("🔄 Sincronizando datos...");
+      console.log("🔄 Sincronizando datos con Supabase...");
       const { data, error: sbError } = await supabase
         .from('bills')
         .select('*')
@@ -34,21 +33,23 @@ export function useGetAllBills() {
       if (sbError) throw sbError;
       
       setBills(data || []);
-      console.log(`✅ Datos en estado: ${data?.length} facturas.`);
+      console.log("✅ Datos recuperados con éxito.");
     } catch (err: any) {
       console.error("❌ Error en refetch:", err.message);
-      setError(err.message);
+      // No ponemos error visual si ya tenemos datos previos para no romper la tabla
+      if (bills.length === 0) setError(err.message);
     } finally {
-      setLoading(false); 
+      setLoading(false);
     }
   }, [bills.length]);
 
   React.useEffect(() => {
     let isMounted = true;
 
-    const loadAllData = async () => {
-      // Forzamos un estado de carga limpio al iniciar
-      if (isMounted) setLoading(true);
+    const initLoad = async () => {
+      if (!isMounted) return;
+      // Solo mostramos loading si la tabla está vacía
+      setLoading(bills.length === 0);
       
       try {
         const [bRes, pRes] = await Promise.all([
@@ -63,7 +64,6 @@ export function useGetAllBills() {
           setBills(bRes.data || []);
           setProviders(pRes.data || []);
           setError(null);
-          console.log("🔥 Carga inicial completada con éxito");
         }
       } catch (err: any) {
         if (isMounted) setError(err.message);
@@ -72,19 +72,16 @@ export function useGetAllBills() {
       }
     };
 
-    loadAllData();
+    initLoad();
 
-    // --- RE-SINCRO AL VOLVER DE YOUTUBE ---
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isMounted) {
-        refetch();
-      }
+    // Sincro por visibilidad
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && isMounted) refetch();
     };
+    document.addEventListener('visibilitychange', handleVisibility);
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // --- REALTIME ---
-    const billsChannel = supabase
+    // Realtime
+    const channel = supabase
       .channel('bills-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bills' }, () => {
         if (isMounted) refetch();
@@ -93,8 +90,8 @@ export function useGetAllBills() {
 
     return () => {
       isMounted = false;
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      supabase.removeChannel(billsChannel);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      supabase.removeChannel(channel);
     };
   }, [refetch]);
 
