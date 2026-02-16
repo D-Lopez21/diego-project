@@ -8,40 +8,40 @@ export function useGetAllProviders() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
+  const fetchProviders = React.useCallback(async (isMounted = true) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const { data, error: supabaseError } = await supabase
+        .from('profile')
+        .select('*')
+        .eq('role', 'proveedor')
+        .eq('active', true) // 🔥 FILTRO: Solo activos
+        .order('name', { ascending: true });
+
+      if (supabaseError) throw supabaseError;
+
+      if (isMounted) {
+        setProviders(data || []);
+      }
+    } catch (err: any) {
+      console.error('❌ Error en fetchProviders:', err.message);
+      if (isMounted) {
+        setError(err.message);
+      }
+    } finally {
+      if (isMounted) {
+        setLoading(false);
+      }
+    }
+  }, []);
+
   React.useEffect(() => {
     let isMounted = true;
+    fetchProviders(isMounted);
 
-    const fetchProviders = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const { data, error: supabaseError } = await supabase
-          .from('profile')
-          .select('*')
-          .eq('role', 'proveedor')
-          .order('name', { ascending: true });
-
-        if (supabaseError) throw supabaseError;
-
-        if (isMounted) {
-          setProviders(data || []);
-        }
-      } catch (err: any) {
-        console.error('❌ Error en fetchProviders:', err.message);
-        if (isMounted) {
-          setError(err.message);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchProviders();
-
-    // 🔍 DEBUGGING REALTIME - LOGS MUY VISIBLES
+    // 🔍 DEBUGGING REALTIME - LOGS RESTAURADOS
     const channel = supabase
       .channel('providers-changes')
       .on(
@@ -58,7 +58,7 @@ export function useGetAllProviders() {
             return;
           }
 
-          // 🔍 LOGS PRINCIPALES - ESTOS SON LOS QUE DEBES BUSCAR
+          // 🔍 LOGS PRINCIPALES
           console.log('');
           console.log('═══════════════════════════════════════');
           console.log('🔔 REALTIME EVENT RECIBIDO');
@@ -69,28 +69,34 @@ export function useGetAllProviders() {
 
           if (payload.eventType === 'INSERT') {
             console.log('➕ INSERTANDO NUEVO PROVIDER:');
-            console.log('   Nombre:', payload.new?.name);
-            console.log('   Email:', payload.new?.email);
-            console.log('   RIF:', payload.new?.rif);
-            
-            setProviders((prev) => {
-              const newProviders = [...prev, payload.new as Profile].sort((a, b) => 
-                a.name.localeCompare(b.name)
-              );
-              console.log('✅ Lista actualizada, total proveedores:', newProviders.length);
-              return newProviders;
-            });
+            // Solo insertamos en el estado si viene activo
+            if (payload.new.active) {
+              setProviders((prev) => {
+                const newProviders = [...prev, payload.new as Profile].sort((a, b) => 
+                  a.name.localeCompare(b.name)
+                );
+                console.log('✅ Lista actualizada, total proveedores:', newProviders.length);
+                return newProviders;
+              });
+            }
           } else if (payload.eventType === 'UPDATE') {
             console.log('✏️ ACTUALIZANDO PROVIDER:', payload.new?.name);
-            setProviders((prev) =>
-              prev.map((provider) =>
-                provider.id === payload.new.id 
-                  ? (payload.new as Profile) 
-                  : provider
-              )
-            );
+            
+            // 🔥 LÓGICA DE BORRADO LÓGICO EN REALTIME
+            if (payload.new.active === false) {
+              console.log('🗑️ DETECTADA DESACTIVACIÓN (active: false). Eliminando de la UI...');
+              setProviders((prev) => prev.filter((p) => p.id !== payload.new.id));
+            } else {
+              setProviders((prev) =>
+                prev.map((provider) =>
+                  provider.id === payload.new.id 
+                    ? (payload.new as Profile) 
+                    : provider
+                )
+              );
+            }
           } else if (payload.eventType === 'DELETE') {
-            console.log('🗑️ ELIMINANDO PROVIDER:', payload.old?.name);
+            console.log('🗑️ ELIMINANDO FÍSICO (fallback):', payload.old?.id);
             setProviders((prev) => 
               prev.filter((provider) => provider.id !== payload.old.id)
             );
@@ -105,9 +111,8 @@ export function useGetAllProviders() {
       isMounted = false;
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchProviders]);
 
-  // Función de actualización
   const updateProvider = React.useCallback(
     async (id: string, updates: Partial<Profile>): Promise<boolean> => {
       try {
@@ -117,33 +122,28 @@ export function useGetAllProviders() {
           .eq('id', id);
 
         if (updateError) throw updateError;
-
-        // Actualización optimista
-        setProviders((prev) =>
-          prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
-        );
-
         return true;
       } catch (err: any) {
         console.error('❌ Error updating provider:', err.message);
         throw err;
       }
-    },
-    []
+    }, []
   );
 
-  // Función de eliminación
+  // 🔥 FUNCIÓN DE BORRADO LÓGICO
   const deleteProvider = React.useCallback(async (id: string): Promise<boolean> => {
     try {
+      console.log('🔄 Iniciando borrado lógico para id:', id);
       const { error: deleteError } = await supabase
         .from('profile')
-        .delete()
+        .update({ active: false }) // Cambiamos delete() por update
         .eq('id', id);
 
       if (deleteError) throw deleteError;
 
       // Eliminación optimista
       setProviders((prev) => prev.filter((p) => p.id !== id));
+      console.log('✅ Borrado lógico exitoso');
 
       return true;
     } catch (err: any) {
@@ -152,44 +152,14 @@ export function useGetAllProviders() {
     }
   }, []);
 
-  // 🔍 Función de refetch con LOGS DETALLADOS
+  // 🔍 REFETCH CON LOGS DETALLADOS RESTAURADOS
   const refetch = React.useCallback(async () => {
     console.log('');
     console.log('🔄🔄🔄 REFETCH MANUAL INICIADO 🔄🔄🔄');
-    console.log('   Hora:', new Date().toLocaleTimeString());
-    
-    try {
-      setLoading(true);
-      console.log('   ⏳ Loading activado');
-      setError(null);
-      
-      const { data, error: supabaseError } = await supabase
-        .from('profile')
-        .select('*')
-        .eq('role', 'proveedor')
-        .order('name', { ascending: true });
-
-      console.log('   📥 Respuesta recibida:');
-      console.log('      - Success:', !supabaseError);
-      console.log('      - Data length:', data?.length);
-      console.log('      - Error:', supabaseError?.message || 'ninguno');
-
-      if (supabaseError) throw supabaseError;
-      
-      setProviders(data || []);
-      setError(null);
-      console.log('   ✅ Providers actualizados:', data?.length);
-    } catch (err: any) {
-      console.error('   ❌ ERROR en refetch:', err.message);
-      setError(err.message);
-    } finally {
-      console.log('   🏁 Finalizando refetch...');
-      setLoading(false);
-      console.log('   ✅ Loading desactivado');
-      console.log('🔄🔄🔄 REFETCH COMPLETADO 🔄🔄🔄');
-      console.log('');
-    }
-  }, []);
+    await fetchProviders(true);
+    console.log('🔄🔄🔄 REFETCH COMPLETADO 🔄🔄🔄');
+    console.log('');
+  }, [fetchProviders]);
 
   return {
     providers,
