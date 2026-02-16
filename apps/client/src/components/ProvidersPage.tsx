@@ -1,6 +1,7 @@
 import React from 'react';
 import { DashboardLayout, Button } from './common';
-import { ProviderRegistrationModal, ProvidersTable } from './providers';
+import ProviderRegistrationModal from './ProviderRegistrationModal';
+import ProvidersTable from './ProvidersTable';
 import { useGetAllProviders } from '../hooks/useGetAllProviders';
 import type { Profile } from '../contexts/AuthContext';
 

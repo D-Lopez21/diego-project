@@ -16,11 +16,11 @@ import {
   CreateBillPage,
   BillDetailsPage,
   BillsPage,
+  ProvidersPage,
 } from './pages';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
-import { ProvidersPage } from './components';
 
 const PublicRoute = ({
   children,

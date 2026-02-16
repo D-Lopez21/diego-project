@@ -6,9 +6,9 @@ import React from 'react';
 export interface Profile {
   id: string;
   name: string;
-  email: string; // 👈 Agregado para solucionar error de email (image_1d1576)
+  email: string;
   role: 'admin' | 'recepcion' | 'liquidacion' | 'auditoria' | 'programacion' | 'pagos' | 'finiquito' | 'proveedor' | 'user'; 
-  rif: string | null; // 👈 Agregado para solucionar error de rif (image_1cb3c0, image_1d1844)
+  rif: string | null;
   suppliers_id: string | null;
   password_change_required: boolean;
   active: boolean;
@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = React.useState<Session | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  const fetchProfile = async (currentUser: User): Promise<AuthUser> => {
+  const fetchProfile = React.useCallback(async (currentUser: User): Promise<AuthUser> => {
     try {
       const { data, error } = await supabase
         .from('profile')
@@ -41,11 +41,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .single();
 
       if (error) {
-        // Si el perfil no existe aún, no es un error crítico
-        console.warn(
-          'Perfil no encontrado (puede ser un usuario nuevo):',
-          error.message,
-        );
+        console.warn('Perfil no encontrado (puede ser un usuario nuevo):', error.message);
         return currentUser;
       }
 
@@ -54,59 +50,85 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.error('Error cargando perfil:', e);
       return currentUser;
     }
-  };
+  }, []);
 
   React.useEffect(() => {
+    // 🔥 FLAG para evitar actualizaciones después del desmontaje
+    let isMounted = true;
+    let authSubscription: ReturnType<typeof supabase.auth.onAuthStateChange>['data']['subscription'] | null = null;
+
     const initializeAuth = async () => {
       try {
         // 1. Verificar sesión inicial
-        const {
-          data: { session: initialSession },
-        } = await supabase.auth.getSession();
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+
+        if (!isMounted) return; // 🛡️ Salir si el componente se desmontó
 
         if (initialSession?.user) {
           const userWithProfile = await fetchProfile(initialSession.user);
-          setSession(initialSession);
-          setUser(userWithProfile);
+          
+          if (isMounted) {
+            setSession(initialSession);
+            setUser(userWithProfile);
+          }
         }
       } catch (error) {
         console.error('Error inicializando auth:', error);
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
 
-      // 2. Escuchar cambios
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-        console.log('🔔 Auth event en Context:', event);
+      // 2. Escuchar cambios de autenticación
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, currentSession) => {
+          if (!isMounted) return; // 🛡️ Ignorar eventos si el componente se desmontó
 
-        setSession(currentSession);
+          console.log('🔔 Auth event:', event);
 
-        if (currentSession?.user) {
-          // 👇 Pequeño delay para dar tiempo a que se cree el perfil
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-            await new Promise((resolve) => setTimeout(resolve, 500));
+          // 🔥 Actualizar sesión inmediatamente
+          setSession(currentSession);
+
+          if (currentSession?.user) {
+            // Solo hacer delay en eventos específicos
+            if (event === 'SIGNED_IN') {
+              await new Promise((resolve) => setTimeout(resolve, 500));
+            }
+
+            if (!isMounted) return; // 🛡️ Verificar de nuevo después del delay
+
+            const userWithProfile = await fetchProfile(currentSession.user);
+            
+            if (isMounted) {
+              setUser(userWithProfile);
+            }
+          } else {
+            // Usuario cerró sesión
+            if (isMounted) {
+              setUser(null);
+            }
           }
 
-          const userWithProfile = await fetchProfile(currentSession.user);
-          setUser(userWithProfile);
-        } else {
-          setUser(null);
+          if (isMounted) {
+            setIsLoading(false);
+          }
         }
+      );
 
-        setIsLoading(false);
-      });
-
-      return subscription;
+      authSubscription = subscription;
     };
 
-    const authSub = initializeAuth();
+    initializeAuth();
 
+    // 🔥 CLEANUP: Limpiar suscripción cuando el componente se desmonte
     return () => {
-      authSub.then((sub) => sub.unsubscribe());
+      isMounted = false;
+      if (authSubscription) {
+        authSubscription.unsubscribe();
+      }
     };
-  }, []);
+  }, [fetchProfile]); // ✅ fetchProfile es estable gracias a useCallback
 
   return (
     <AuthContext.Provider
