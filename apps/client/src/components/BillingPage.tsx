@@ -27,7 +27,7 @@ export default function BillingPage() {
   };
 
   return (
-    <DashboardLayout title="Sistema de Facturación" returnTo="/">
+    <DashboardLayout title="Sistema Administrativo Vertice" returnTo="/">
       <div className="w-full flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
         
         {/* Buscador unificado */}
