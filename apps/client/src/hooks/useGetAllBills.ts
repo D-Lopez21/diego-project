@@ -17,22 +17,30 @@ export function useGetAllBills() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // --- FUNCIÓN DE REFETCH (Definida arriba para que useEffect pueda usarla) ---
+  // --- FUNCIÓN DE REFETCH (Definida con useCallback para estabilidad) ---
   const refetch = React.useCallback(async () => {
-    // Solo ponemos loading si no hay datos previos para evitar parpadeos molestos
-    if (bills.length === 0) setLoading(true); 
+    // Si ya tenemos datos, no mostramos el loader principal para evitar parpadeos
+    if (bills.length === 0) setLoading(true);
     setError(null);
     
     try {
+      console.log("🔄 Intentando sincronizar con Supabase...");
+      
       const { data, error: supabaseError } = await supabase
         .from('bills')
         .select('*')
         .order('arrival_date', { ascending: false });
 
-      if (supabaseError) throw supabaseError;
+      if (supabaseError) {
+        console.error("❌ Error de Supabase en refetch:", supabaseError);
+        throw supabaseError;
+      }
+      
       setBills(data || []);
+      console.log("✅ Datos sincronizados correctamente.");
     } catch (err: any) {
-      setError(err.message);
+      console.error("❌ Error en el catch de refetch:", err);
+      setError(err.message || 'Error desconocido al sincronizar');
     } finally {
       setLoading(false);
     }
@@ -76,14 +84,14 @@ export function useGetAllBills() {
       }
     };
 
-    // 1. Carga inicial
+    // 1. Carga inicial de datos
     fetchBills();
     fetchProviders();
 
-    // 2. Lógica para cuando el usuario vuelve de YouTube/Otras pestañas
+    // 2. Escuchador de visibilidad (YouTube/Otras pestañas)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('🔄 Sincronizando facturas por cambio de pestaña...');
+        console.log('📱 Pestaña visible: Disparando refetch...');
         refetch();
       }
     };
@@ -98,6 +106,7 @@ export function useGetAllBills() {
         { event: '*', schema: 'public', table: 'bills' },
         (payload) => {
           if (!isMounted) return;
+          console.log('📊 Cambio detectado vía Realtime:', payload.eventType);
 
           if (payload.eventType === 'INSERT') {
             setBills((prev) => [payload.new as Bill, ...prev]);
@@ -112,17 +121,19 @@ export function useGetAllBills() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('🔌 Estado del canal Realtime:', status);
+      });
 
-    // Cleanup
+    // Cleanup al desmontar el componente
     return () => {
       isMounted = false;
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       supabase.removeChannel(billsChannel);
     };
-  }, [refetch]); // Agregado refetch como dependencia
+  }, [refetch]);
 
-  // Función de eliminación
+  // Función para eliminar facturas
   const deleteBill = React.useCallback(async (id: string) => {
     try {
       const { error: deleteError } = await supabase
@@ -131,14 +142,17 @@ export function useGetAllBills() {
         .eq('id', id);
 
       if (deleteError) throw deleteError;
+      
+      // Actualización optimista local
       setBills((prev) => prev.filter((bill) => bill.id !== id));
       return true;
     } catch (err: any) {
-      console.error('Error deleting bill:', err.message);
+      console.error('Error al eliminar factura:', err.message);
       return false;
     }
   }, []);
 
+  // Formateador de nombres de proveedor
   const getProviderName = React.useCallback(
     (providerId?: string) => {
       if (!providerId) return 'Sin proveedor';
