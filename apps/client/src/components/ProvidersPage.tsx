@@ -50,7 +50,7 @@ export default function ProvidersPage() {
         </div>
 
         {/* Botón Nuevo Proveedor */}
-        <button 
+        <Button 
           onClick={() => { setProviderToEdit(null); setModalIsOpen(true); }}
           className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all duration-200"
         >
@@ -58,7 +58,7 @@ export default function ProvidersPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
           </svg>
           <span>Nuevo Proveedor</span>
-        </button>
+        </Button>
       </div>
 
       {/* Tabla de Proveedores */}
