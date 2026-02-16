@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
     // URL de redirección
     const redirectUrl = Deno.env.get("SITE_URL") 
       ? `${Deno.env.get("SITE_URL")}/reset-password`
-      : "http://https://seguros-vertice.onrender.com/reset-password";
+      : "https://seguros-vertice.onrender.com/reset-password";
 
     // Metadata para proveedor
     const userMetadata = {
