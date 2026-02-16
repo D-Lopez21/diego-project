@@ -68,7 +68,7 @@ export const DashboardLayout = ({
               <HomeIcon className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-bold text-slate-800 tracking-tight">
-              Admin<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600">Panel</span>
+              Seguros<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600">Vértice</span>
             </span>
           </div>
 
