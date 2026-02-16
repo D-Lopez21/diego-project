@@ -17,14 +17,15 @@ export function useGetAllBills() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // --- SOLUCIÓN AL BLOQUEO: REFETCH ULTRA-SEGURO ---
+  // --- REFETCH SEGURO ---
   const refetch = React.useCallback(async () => {
-    // Solo activamos loading si realmente no hay nada en pantalla
+    // Si ya hay facturas cargadas, NO mostramos el texto de "Cargando..."
+    // Esto evita que la pantalla se quede en blanco si el refetch tarda.
     if (bills.length === 0) setLoading(true);
     setError(null);
     
     try {
-      console.log("🔄 Sincronizando datos con Supabase...");
+      console.log("🔄 Sincronizando datos...");
       const { data, error: sbError } = await supabase
         .from('bills')
         .select('*')
@@ -32,14 +33,12 @@ export function useGetAllBills() {
 
       if (sbError) throw sbError;
       
-      // Actualizamos los datos primero
       setBills(data || []);
-      console.log(`✅ Sincronización exitosa: ${data?.length} facturas cargadas.`);
+      console.log(`✅ Datos en estado: ${data?.length} facturas.`);
     } catch (err: any) {
       console.error("❌ Error en refetch:", err.message);
       setError(err.message);
     } finally {
-      // FORZAMOS el apagado del cargando, pase lo que pase
       setLoading(false); 
     }
   }, [bills.length]);
@@ -47,9 +46,9 @@ export function useGetAllBills() {
   React.useEffect(() => {
     let isMounted = true;
 
-    const loadData = async () => {
-      if (!isMounted) return;
-      setLoading(true);
+    const loadAllData = async () => {
+      // Forzamos un estado de carga limpio al iniciar
+      if (isMounted) setLoading(true);
       
       try {
         const [bRes, pRes] = await Promise.all([
@@ -64,21 +63,20 @@ export function useGetAllBills() {
           setBills(bRes.data || []);
           setProviders(pRes.data || []);
           setError(null);
+          console.log("🔥 Carga inicial completada con éxito");
         }
       } catch (err: any) {
         if (isMounted) setError(err.message);
       } finally {
-        // Aseguramos que el componente se desbloquee
         if (isMounted) setLoading(false);
       }
     };
 
-    loadData();
+    loadAllData();
 
-    // --- RE-SINCRO AL VOLVER DE YOUTUBE / MENÚ ---
+    // --- RE-SINCRO AL VOLVER DE YOUTUBE ---
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log("📱 Pestaña activa: Refrescando...");
+      if (document.visibilityState === 'visible' && isMounted) {
         refetch();
       }
     };
