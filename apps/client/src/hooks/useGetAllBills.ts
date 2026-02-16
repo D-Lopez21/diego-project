@@ -17,14 +17,15 @@ export function useGetAllBills() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // --- FUNCIÓN DE REFETCH (Definida con useCallback para estabilidad) ---
+  // --- FUNCIÓN DE REFETCH MEJORADA ---
+  // Actualiza los datos en segundo plano para no bloquear la UI si ya hay información.
   const refetch = React.useCallback(async () => {
-    // Si ya tenemos datos, no mostramos el loader principal para evitar parpadeos
+    // Solo mostramos el loader principal si la lista está vacía
     if (bills.length === 0) setLoading(true);
     setError(null);
     
     try {
-      console.log("🔄 Intentando sincronizar con Supabase...");
+      console.log("🔄 Sincronizando datos con Supabase...");
       
       const { data, error: supabaseError } = await supabase
         .from('bills')
@@ -37,11 +38,12 @@ export function useGetAllBills() {
       }
       
       setBills(data || []);
-      console.log("✅ Datos sincronizados correctamente.");
+      console.log("✅ Sincronización exitosa:", data?.length, "facturas cargadas.");
     } catch (err: any) {
-      console.error("❌ Error en el catch de refetch:", err);
-      setError(err.message || 'Error desconocido al sincronizar');
+      console.error("❌ Error crítico en refetch:", err);
+      setError(err.message || 'Error al sincronizar datos');
     } finally {
+      // Garantizamos que el estado de carga se apague siempre
       setLoading(false);
     }
   }, [bills.length]);
@@ -49,56 +51,46 @@ export function useGetAllBills() {
   React.useEffect(() => {
     let isMounted = true;
 
-    const fetchBills = async () => {
+    // Carga inicial optimizada de facturas y proveedores
+    const loadInitialData = async () => {
+      if (!isMounted) return;
+      setLoading(true);
+      
       try {
-        const { data, error: supabaseError } = await supabase
-          .from('bills')
-          .select('*')
-          .order('arrival_date', { ascending: false });
+        const [billsRes, providersRes] = await Promise.all([
+          supabase.from('bills').select('*').order('arrival_date', { ascending: false }),
+          supabase.from('profile').select('*').eq('role', 'proveedor').eq('active', true)
+        ]);
 
-        if (supabaseError) throw supabaseError;
-        
+        if (billsRes.error) throw billsRes.error;
+        if (providersRes.error) throw providersRes.error;
+
         if (isMounted) {
-          setBills(data || []);
+          setBills(billsRes.data || []);
+          setProviders(providersRes.data || []);
           setError(null);
         }
       } catch (err: any) {
+        console.error("❌ Error en carga inicial:", err);
         if (isMounted) setError(err.message);
       } finally {
         if (isMounted) setLoading(false);
       }
     };
 
-    const fetchProviders = async () => {
-      try {
-        const { data, error: supabaseError } = await supabase
-          .from('profile')
-          .select('*')
-          .eq('role', 'proveedor')
-          .eq('active', true);
+    loadInitialData();
 
-        if (supabaseError) throw supabaseError;
-        if (isMounted) setProviders(data || []);
-      } catch (err: any) {
-        console.error('Error fetching providers:', err.message);
-      }
-    };
-
-    // 1. Carga inicial de datos
-    fetchBills();
-    fetchProviders();
-
-    // 2. Escuchador de visibilidad (YouTube/Otras pestañas)
+    // --- RE-SINCRONIZACIÓN AL VOLVER DE OTRA PESTAÑA (YouTube, etc) ---
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('📱 Pestaña visible: Disparando refetch...');
+        console.log('📱 Pestaña activa detectada. Refrescando datos...');
         refetch();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // 3. Suscripción Realtime (WebSockets)
+    // --- SUSCRIPCIÓN REALTIME ---
     const billsChannel = supabase
       .channel('bills-changes')
       .on(
@@ -106,26 +98,16 @@ export function useGetAllBills() {
         { event: '*', schema: 'public', table: 'bills' },
         (payload) => {
           if (!isMounted) return;
-          console.log('📊 Cambio detectado vía Realtime:', payload.eventType);
-
-          if (payload.eventType === 'INSERT') {
-            setBills((prev) => [payload.new as Bill, ...prev]);
-          } else if (payload.eventType === 'UPDATE') {
-            setBills((prev) =>
-              prev.map((bill) =>
-                bill.id === payload.new.id ? (payload.new as Bill) : bill
-              )
-            );
-          } else if (payload.eventType === 'DELETE') {
-            setBills((prev) => prev.filter((bill) => bill.id !== payload.old.id));
-          }
+          console.log('📊 Cambio en base de datos detectado:', payload.eventType);
+          // Refrescamos todo el estado para mantener consistencia absoluta
+          refetch(); 
         }
       )
       .subscribe((status) => {
-        console.log('🔌 Estado del canal Realtime:', status);
+        console.log('🔌 Estado Realtime:', status);
       });
 
-    // Cleanup al desmontar el componente
+    // Cleanup: Limpieza de eventos y canales
     return () => {
       isMounted = false;
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -143,16 +125,15 @@ export function useGetAllBills() {
 
       if (deleteError) throw deleteError;
       
-      // Actualización optimista local
       setBills((prev) => prev.filter((bill) => bill.id !== id));
       return true;
     } catch (err: any) {
-      console.error('Error al eliminar factura:', err.message);
+      console.error('Error eliminando factura:', err.message);
       return false;
     }
   }, []);
 
-  // Formateador de nombres de proveedor
+  // Función para obtener el nombre del proveedor
   const getProviderName = React.useCallback(
     (providerId?: string) => {
       if (!providerId) return 'Sin proveedor';
