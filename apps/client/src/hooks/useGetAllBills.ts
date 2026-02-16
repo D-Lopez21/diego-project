@@ -11,20 +11,25 @@ interface Provider {
   active: boolean;
 }
 
+// Variable fuera del hook para persistir datos entre navegaciones de menú
+let cachedBills: Bill[] = [];
+let cachedProviders: Provider[] = [];
+
 export function useGetAllBills() {
-  const [bills, setBills] = React.useState<Bill[]>([]);
-  const [providers, setProviders] = React.useState<Provider[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  // Inicializamos con el caché para que la tabla no aparezca vacía al volver del menú
+  const [bills, setBills] = React.useState<Bill[]>(cachedBills);
+  const [providers, setProviders] = React.useState<Provider[]>(cachedProviders);
+  
+  // Solo mostramos loading si realmente no tenemos nada que mostrar
+  const [loading, setLoading] = React.useState(cachedBills.length === 0);
   const [error, setError] = React.useState<string | null>(null);
 
-  // --- REFETCH BLINDADO ---
-  const refetch = React.useCallback(async () => {
-    // Si ya hay facturas, no bloqueamos la UI con el loader
-    if (bills.length === 0) setLoading(true);
+  const refetch = React.useCallback(async (showLoader = false) => {
+    if (showLoader) setLoading(true);
     setError(null);
     
     try {
-      console.log("🔄 Sincronizando datos con Supabase...");
+      console.log("🔄 Sincronizando datos...");
       const { data, error: sbError } = await supabase
         .from('bills')
         .select('*')
@@ -32,25 +37,25 @@ export function useGetAllBills() {
 
       if (sbError) throw sbError;
       
-      setBills(data || []);
-      console.log("✅ Datos recuperados con éxito.");
+      const result = data || [];
+      cachedBills = result; // Actualizamos caché global
+      setBills(result);
+      console.log("✅ Datos actualizados en el estado.");
     } catch (err: any) {
       console.error("❌ Error en refetch:", err.message);
-      // No ponemos error visual si ya tenemos datos previos para no romper la tabla
-      if (bills.length === 0) setError(err.message);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [bills.length]);
+  }, []);
 
   React.useEffect(() => {
     let isMounted = true;
 
-    const initLoad = async () => {
-      if (!isMounted) return;
-      // Solo mostramos loading si la tabla está vacía
-      setLoading(bills.length === 0);
-      
+    const loadInitialData = async () => {
+      // Si ya tenemos caché, no bloqueamos la UI
+      if (cachedBills.length === 0) setLoading(true);
+
       try {
         const [bRes, pRes] = await Promise.all([
           supabase.from('bills').select('*').order('arrival_date', { ascending: false }),
@@ -61,8 +66,10 @@ export function useGetAllBills() {
         if (pRes.error) throw pRes.error;
 
         if (isMounted) {
-          setBills(bRes.data || []);
-          setProviders(pRes.data || []);
+          cachedBills = bRes.data || [];
+          cachedProviders = pRes.data || [];
+          setBills(cachedBills);
+          setProviders(cachedProviders);
           setError(null);
         }
       } catch (err: any) {
@@ -72,19 +79,20 @@ export function useGetAllBills() {
       }
     };
 
-    initLoad();
+    loadInitialData();
 
-    // Sincro por visibilidad
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && isMounted) refetch();
+      if (document.visibilityState === 'visible' && isMounted) {
+        refetch(false); // Refresco silencioso
+      }
     };
+
     document.addEventListener('visibilitychange', handleVisibility);
 
-    // Realtime
     const channel = supabase
       .channel('bills-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bills' }, () => {
-        if (isMounted) refetch();
+        if (isMounted) refetch(false);
       })
       .subscribe();
 
@@ -99,7 +107,11 @@ export function useGetAllBills() {
     try {
       const { error: delError } = await supabase.from('bills').delete().eq('id', id);
       if (delError) throw delError;
-      setBills(prev => prev.filter(b => b.id !== id));
+      setBills(prev => {
+        const filtered = prev.filter(b => b.id !== id);
+        cachedBills = filtered;
+        return filtered;
+      });
       return true;
     } catch (err: any) { return false; }
   }, []);
