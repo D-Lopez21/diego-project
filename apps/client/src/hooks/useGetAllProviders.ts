@@ -8,16 +8,10 @@ export function useGetAllProviders() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // 🔍 DEBUGGING
-  console.log('🎣 useGetAllProviders ejecutado');
-
   React.useEffect(() => {
     let isMounted = true;
-    console.log('🎣 useGetAllProviders: useEffect iniciado');
 
-    // 🔥 Función dentro del useEffect para evitar dependencias circulares
     const fetchProviders = async () => {
-      console.log('📥 Iniciando fetch de providers...');
       try {
         setLoading(true);
         setError(null);
@@ -28,19 +22,10 @@ export function useGetAllProviders() {
           .eq('role', 'proveedor')
           .order('name', { ascending: true });
 
-        console.log('📥 Respuesta de Supabase:', {
-          success: !supabaseError,
-          dataLength: data?.length,
-          error: supabaseError
-        });
-
         if (supabaseError) throw supabaseError;
 
         if (isMounted) {
-          console.log('✅ Seteando providers:', data?.length);
           setProviders(data || []);
-        } else {
-          console.log('⚠️ Componente desmontado, no se actualiza estado');
         }
       } catch (err: any) {
         console.error('❌ Error en fetchProviders:', err.message);
@@ -49,18 +34,14 @@ export function useGetAllProviders() {
         }
       } finally {
         if (isMounted) {
-          console.log('✅ Finalizando loading');
           setLoading(false);
         }
       }
     };
 
-    // Carga inicial
     fetchProviders();
 
-    // 🔥 Suscripción Realtime
-    console.log('🔌 Creando canal providers-changes...');
-    
+    // 🔍 DEBUGGING REALTIME - LOGS MUY VISIBLES
     const channel = supabase
       .channel('providers-changes')
       .on(
@@ -69,24 +50,38 @@ export function useGetAllProviders() {
           event: '*',
           schema: 'public',
           table: 'profile',
-          filter: 'role=eq.proveedor', // ← Solo escuchar proveedores
+          filter: 'role=eq.proveedor',
         },
         (payload) => {
           if (!isMounted) {
-            console.log('⚠️ Evento recibido pero componente desmontado');
+            console.log('⚠️⚠️⚠️ Evento recibido PERO componente desmontado');
             return;
           }
 
-          console.log('👤 Provider changed:', payload.eventType, payload);
+          // 🔍 LOGS PRINCIPALES - ESTOS SON LOS QUE DEBES BUSCAR
+          console.log('');
+          console.log('═══════════════════════════════════════');
+          console.log('🔔 REALTIME EVENT RECIBIDO');
+          console.log('   Tipo:', payload.eventType);
+          console.log('   Hora:', new Date().toLocaleTimeString());
+          console.log('═══════════════════════════════════════');
+          console.log('');
 
-          // Actualización optimista del estado
           if (payload.eventType === 'INSERT') {
-            setProviders((prev) => 
-              [...prev, payload.new as Profile].sort((a, b) => 
+            console.log('➕ INSERTANDO NUEVO PROVIDER:');
+            console.log('   Nombre:', payload.new?.name);
+            console.log('   Email:', payload.new?.email);
+            console.log('   RIF:', payload.new?.rif);
+            
+            setProviders((prev) => {
+              const newProviders = [...prev, payload.new as Profile].sort((a, b) => 
                 a.name.localeCompare(b.name)
-              )
-            );
+              );
+              console.log('✅ Lista actualizada, total proveedores:', newProviders.length);
+              return newProviders;
+            });
           } else if (payload.eventType === 'UPDATE') {
+            console.log('✏️ ACTUALIZANDO PROVIDER:', payload.new?.name);
             setProviders((prev) =>
               prev.map((provider) =>
                 provider.id === payload.new.id 
@@ -95,6 +90,7 @@ export function useGetAllProviders() {
               )
             );
           } else if (payload.eventType === 'DELETE') {
+            console.log('🗑️ ELIMINANDO PROVIDER:', payload.old?.name);
             setProviders((prev) => 
               prev.filter((provider) => provider.id !== payload.old.id)
             );
@@ -102,24 +98,18 @@ export function useGetAllProviders() {
         }
       )
       .subscribe((status) => {
-        console.log('📡 Estado del canal providers-changes:', status);
+        console.log('📡 Estado de suscripción Realtime:', status);
       });
 
-    console.log('✅ Canal providers-changes creado');
-
-    // 🔥 Cleanup
     return () => {
-      console.log('🧹 Cleanup de useGetAllProviders');
       isMounted = false;
       supabase.removeChannel(channel);
-      console.log('🗑️ Canal providers-changes removido');
     };
-  }, []); // ← Sin dependencias
+  }, []);
 
-  // 🔥 Función de actualización separada (no afecta useEffect)
+  // Función de actualización
   const updateProvider = React.useCallback(
     async (id: string, updates: Partial<Profile>): Promise<boolean> => {
-      console.log('📝 Actualizando provider:', id, updates);
       try {
         const { error: updateError } = await supabase
           .from('profile')
@@ -133,7 +123,6 @@ export function useGetAllProviders() {
           prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
         );
 
-        console.log('✅ Provider actualizado exitosamente');
         return true;
       } catch (err: any) {
         console.error('❌ Error updating provider:', err.message);
@@ -143,9 +132,8 @@ export function useGetAllProviders() {
     []
   );
 
-  // 🔥 Función de eliminación separada
+  // Función de eliminación
   const deleteProvider = React.useCallback(async (id: string): Promise<boolean> => {
-    console.log('🗑️ Eliminando provider:', id);
     try {
       const { error: deleteError } = await supabase
         .from('profile')
@@ -157,7 +145,6 @@ export function useGetAllProviders() {
       // Eliminación optimista
       setProviders((prev) => prev.filter((p) => p.id !== id));
 
-      console.log('✅ Provider eliminado exitosamente');
       return true;
     } catch (err: any) {
       console.error('❌ Error deleting provider:', err.message);
@@ -165,27 +152,42 @@ export function useGetAllProviders() {
     }
   }, []);
 
-  // 🔥 Función de refetch manual (separada, no causa loops)
+  // 🔍 Función de refetch con LOGS DETALLADOS
   const refetch = React.useCallback(async () => {
-    console.log('🔄 Refetch manual de providers iniciado');
-    setLoading(true);
+    console.log('');
+    console.log('🔄🔄🔄 REFETCH MANUAL INICIADO 🔄🔄🔄');
+    console.log('   Hora:', new Date().toLocaleTimeString());
+    
     try {
+      setLoading(true);
+      console.log('   ⏳ Loading activado');
+      setError(null);
+      
       const { data, error: supabaseError } = await supabase
         .from('profile')
         .select('*')
         .eq('role', 'proveedor')
         .order('name', { ascending: true });
 
+      console.log('   📥 Respuesta recibida:');
+      console.log('      - Success:', !supabaseError);
+      console.log('      - Data length:', data?.length);
+      console.log('      - Error:', supabaseError?.message || 'ninguno');
+
       if (supabaseError) throw supabaseError;
       
       setProviders(data || []);
       setError(null);
-      console.log('✅ Refetch completado:', data?.length);
+      console.log('   ✅ Providers actualizados:', data?.length);
     } catch (err: any) {
-      console.error('❌ Error en refetch:', err.message);
+      console.error('   ❌ ERROR en refetch:', err.message);
       setError(err.message);
     } finally {
+      console.log('   🏁 Finalizando refetch...');
       setLoading(false);
+      console.log('   ✅ Loading desactivado');
+      console.log('🔄🔄🔄 REFETCH COMPLETADO 🔄🔄🔄');
+      console.log('');
     }
   }, []);
 
