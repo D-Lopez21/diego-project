@@ -6,7 +6,7 @@ import { useGetAllProviders } from '../hooks/useGetAllProviders';
 import type { Profile } from '../contexts/AuthContext';
 
 export default function ProvidersPage() {
-  const { providers, loading, updateProvider, deleteProvider} = useGetAllProviders();
+  const { providers, loading, updateProvider, deleteProvider } = useGetAllProviders(); // ← SIN refetch
   
   const [modalIsOpen, setModalIsOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -68,7 +68,7 @@ export default function ProvidersPage() {
         onDelete={handleDelete} 
       />
 
-      {/* Modal - SIN REFETCH */}
+      {/* Modal - REALTIME AHORA FUNCIONA */}
       <ProviderRegistrationModal
         isOpen={modalIsOpen}
         onClose={() => setModalIsOpen(false)}
@@ -79,7 +79,7 @@ export default function ProvidersPage() {
           console.log('✅✅✅ PROVEEDOR GUARDADO EXITOSAMENTE ✅✅✅');
           console.log('   Esperando actualización automática vía Realtime...');
           console.log('');
-          // NO llamar refetch - probar si Realtime funciona solo
+          // NO llamar refetch - Realtime se encargará
         }}
       />
     </DashboardLayout>
