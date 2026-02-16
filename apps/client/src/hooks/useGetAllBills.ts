@@ -17,10 +17,30 @@ export function useGetAllBills() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
+  // --- FUNCIÓN DE REFETCH (Definida arriba para que useEffect pueda usarla) ---
+  const refetch = React.useCallback(async () => {
+    // Solo ponemos loading si no hay datos previos para evitar parpadeos molestos
+    if (bills.length === 0) setLoading(true); 
+    setError(null);
+    
+    try {
+      const { data, error: supabaseError } = await supabase
+        .from('bills')
+        .select('*')
+        .order('arrival_date', { ascending: false });
+
+      if (supabaseError) throw supabaseError;
+      setBills(data || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [bills.length]);
+
   React.useEffect(() => {
     let isMounted = true;
 
-    // 🔥 Funciones dentro del useEffect para evitar dependencias circulares
     const fetchBills = async () => {
       try {
         const { data, error: supabaseError } = await supabase
@@ -35,13 +55,9 @@ export function useGetAllBills() {
           setError(null);
         }
       } catch (err: any) {
-        if (isMounted) {
-          setError(err.message);
-        }
+        if (isMounted) setError(err.message);
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
@@ -54,20 +70,27 @@ export function useGetAllBills() {
           .eq('active', true);
 
         if (supabaseError) throw supabaseError;
-        
-        if (isMounted) {
-          setProviders(data || []);
-        }
+        if (isMounted) setProviders(data || []);
       } catch (err: any) {
         console.error('Error fetching providers:', err.message);
       }
     };
 
-    // Carga inicial
+    // 1. Carga inicial
     fetchBills();
     fetchProviders();
 
-    // Suscripción realtime
+    // 2. Lógica para cuando el usuario vuelve de YouTube/Otras pestañas
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('🔄 Sincronizando facturas por cambio de pestaña...');
+        refetch();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // 3. Suscripción Realtime (WebSockets)
     const billsChannel = supabase
       .channel('bills-changes')
       .on(
@@ -76,9 +99,6 @@ export function useGetAllBills() {
         (payload) => {
           if (!isMounted) return;
 
-          console.log('📊 Bill changed:', payload.eventType);
-
-          // Actualización optimista del estado
           if (payload.eventType === 'INSERT') {
             setBills((prev) => [payload.new as Bill, ...prev]);
           } else if (payload.eventType === 'UPDATE') {
@@ -97,11 +117,12 @@ export function useGetAllBills() {
     // Cleanup
     return () => {
       isMounted = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       supabase.removeChannel(billsChannel);
     };
-  }, []); // ← Sin dependencias
+  }, [refetch]); // Agregado refetch como dependencia
 
-  // 🔥 Función de eliminación separada (no afecta useEffect)
+  // Función de eliminación
   const deleteBill = React.useCallback(async (id: string) => {
     try {
       const { error: deleteError } = await supabase
@@ -110,31 +131,11 @@ export function useGetAllBills() {
         .eq('id', id);
 
       if (deleteError) throw deleteError;
-
-      // Actualización optimista
       setBills((prev) => prev.filter((bill) => bill.id !== id));
       return true;
     } catch (err: any) {
       console.error('Error deleting bill:', err.message);
       return false;
-    }
-  }, []);
-
-  // 🔥 Función de refetch manual
-  const refetch = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data, error: supabaseError } = await supabase
-        .from('bills')
-        .select('*')
-        .order('arrival_date', { ascending: false });
-
-      if (supabaseError) throw supabaseError;
-      setBills(data || []);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
     }
   }, []);
 

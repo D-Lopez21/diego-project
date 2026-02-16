@@ -69,6 +69,13 @@ export default function BillingPage() {
         getProviderName={getProviderName}
         onDelete={handleDelete}
       />
+
+      {/* Opcional: Feedback visual de cuántos resultados hay */}
+      {!loading && !error && searchTerm && (
+        <p className="mt-4 text-xs text-neutral-500">
+          Mostrando resultados para "{searchTerm}" en {filterType === 'number' ? 'N° Factura' : filterType === 'provider' ? 'Proveedor' : 'Lote'}
+        </p>
+      )}
     </DashboardLayout>
   );
 }
