@@ -1,4 +1,5 @@
 import { EditIcon, TrashIcon } from './icons';
+import { useNavigate } from 'react-router';
 
 interface BillsTableProps {
   bills: any[];
@@ -13,6 +14,8 @@ interface BillsTableProps {
 export default function BillsTable({ 
   bills, loading, error, searchTerm, filterType, getProviderName, onDelete 
 }: BillsTableProps) {
+
+    const navigate = useNavigate();
 
   const filteredBills = bills.filter((bill) => {
     if (!searchTerm) return true;
@@ -66,11 +69,11 @@ export default function BillsTable({
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button 
-                        onClick={() => window.location.href = `/bills/${bill.id}`}
-                        className="p-1.5 text-neutral-400 hover:text-blue-600 transition-colors"
-                      >
-                        <EditIcon className="size-5" />
-                      </button>
+                        onClick={() => navigate(`/bills/${bill.id}`)} // Cambia window.location por navigate
+                          className="p-1.5 text-neutral-400 hover:text-blue-600 transition-colors"
+                        >
+                          <EditIcon className="size-5" />
+                        </button>
                       <button 
                         onClick={() => onDelete(bill.id)} 
                         className="p-1.5 text-neutral-400 hover:text-red-600 transition-colors"
