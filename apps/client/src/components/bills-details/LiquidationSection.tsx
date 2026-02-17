@@ -50,14 +50,14 @@ export default function LiquidationSection({
   const montosCoinciden = Math.abs(montoAmp - montoFactNum) < 0.01;
 
   const receptorNombre =
-    allUsers?.find((u: any) => u.id === currentBill?.analyst_receptor_id)?.name || 'DIEGO LOPEZ';
+    allUsers?.find((u: any) => u.id === currentBill?.analyst_receptor_id)?.full_name || allUsers?.find((u: any) => u.id === currentBill?.analyst_receptor_id)?.name || 'DIEGO LOPEZ';
 
   // Mismo patrón que getAnalystName() en ReceptionSection
   const getLiquidadorName = () => {
     const analystId = data.analyst_liquidador || currentBill?.analyst_severance;
     if (!analystId) return 'Pendiente';
     const analyst = allUsers?.find((u: any) => u.id === analystId);
-    return analyst?.name || 'Desconocido';
+    return analyst?.full_name || analyst?.name || 'Desconocido';
   };
 
   if (!billExists) return null;
