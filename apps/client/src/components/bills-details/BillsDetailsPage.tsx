@@ -318,7 +318,6 @@ export default function BillsDetailsPage({
             gna: parseFloat(sectionData.gna) || 0,
             medical_honoraries: parseFloat(sectionData.honorarios_medic) || 0,
             clinical_services: parseFloat(sectionData.servicios_clinicos) || 0,
-            retention_rate: (parseFloat(sectionData.monto_fact) || 0) * 0.05,
             indemnizable_rate: parseFloat(sectionData.monto_indemniz) || 0,
             nomenclature_pile: sectionData.nomenclature_pile || null,
             analyst_severance: currentUserId,
