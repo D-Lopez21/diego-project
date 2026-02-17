@@ -4,11 +4,13 @@ import { PlusIcon } from './icons';
 import BillsTable from './BillsTable';
 import { useNavigate } from 'react-router';
 import { useGetAllBills } from '../hooks/useGetAllBills';
+import { useAuth } from '../hooks/useAuth'; // ✅ Importar useAuth
 
 type FilterType = 'number' | 'provider' | 'lot';
 
 export default function BillingPage() {
   const navigate = useNavigate();
+  const { user } = useAuth(); // ✅ Obtener usuario actual
   const { bills, loading, error, getProviderName, deleteBill } = useGetAllBills();
   
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -55,9 +57,12 @@ export default function BillingPage() {
           )}
         </div>
 
-        <Button icon={<PlusIcon className="size-5" />} onClick={() => navigate('create-bill')}>
-          Nueva Factura
-        </Button>
+        {/* ✅ Solo mostrar botón "Nueva Factura" si NO es proveedor */}
+        {user?.profile?.role !== 'proveedor' && (
+          <Button icon={<PlusIcon className="size-5" />} onClick={() => navigate('create-bill')}>
+            Nueva Factura
+          </Button>
+        )}
       </div>
 
       <BillsTable 
