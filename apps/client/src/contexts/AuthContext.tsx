@@ -31,6 +31,7 @@ export const AuthContext = React.createContext<AuthContextType | undefined>(
 const TAB_ID = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 const ACTIVE_TAB_KEY = 'active_tab_id';
 const TAB_HEARTBEAT_KEY = 'tab_heartbeat';
+const TAB_TIMESTAMP_KEY = 'tab_timestamp';
 const HEARTBEAT_INTERVAL = 2000; // 2 segundos
 const HEARTBEAT_TIMEOUT = 5000; // 5 segundos
 
@@ -38,10 +39,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = React.useState<AuthUser | null>(null);
   const [session, setSession] = React.useState<Session | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [isActiveTab, setIsActiveTab] = React.useState(true); // ✅ Cambiar a true por defecto
+  const [isActiveTab, setIsActiveTab] = React.useState(false);
+  const [isChecking, setIsChecking] = React.useState(true);
 
   const heartbeatIntervalRef = React.useRef<number | null>(null);
   const checkActiveTabIntervalRef = React.useRef<number | null>(null);
+  const hasAttemptedActivation = React.useRef(false);
 
   const fetchProfile = React.useCallback(async (currentUser: User): Promise<AuthUser> => {
     try {
@@ -63,50 +66,72 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  // ✅ Función mejorada para verificar si esta pestaña debe ser la activa
-  const tryToBeActiveTab = React.useCallback((): boolean => {
-    const activeTabId = localStorage.getItem(ACTIVE_TAB_KEY);
-    const lastHeartbeat = localStorage.getItem(TAB_HEARTBEAT_KEY);
-    
-    // Si no hay pestaña activa, esta pestaña toma el control
-    if (!activeTabId) {
+  // ✅ Función para verificar si esta pestaña puede ser activa (SIN recargar automáticamente)
+  const canBeActiveTab = React.useCallback((): boolean => {
+  const activeTabId = localStorage.getItem(ACTIVE_TAB_KEY);
+  const lastHeartbeat = localStorage.getItem(TAB_HEARTBEAT_KEY);
+  // ✅ Eliminada la línea de tabTimestamp
+  
+  // Si no hay pestaña activa, esta puede ser activa
+  if (!activeTabId) {
+    return true;
+  }
+  
+  // Si esta ES la pestaña activa
+  if (activeTabId === TAB_ID) {
+    return true;
+  }
+  
+  // Verificar si la pestaña activa anterior está muerta
+  if (lastHeartbeat) {
+    const timeSinceLastHeartbeat = Date.now() - parseInt(lastHeartbeat);
+    if (timeSinceLastHeartbeat > HEARTBEAT_TIMEOUT) {
+      console.log('⚠️ Pestaña anterior está muerta');
+      return true;
+    }
+  }
+  
+  return false;
+}, []);
+  // ✅ Función para intentar tomar el control (solo si puede)
+  const tryTakeControl = React.useCallback(() => {
+    if (canBeActiveTab()) {
+      const now = Date.now();
       localStorage.setItem(ACTIVE_TAB_KEY, TAB_ID);
-      localStorage.setItem(TAB_HEARTBEAT_KEY, Date.now().toString());
-      console.log('✅ No había pestaña activa. Esta pestaña toma el control:', TAB_ID);
-      return true;
-    }
-    
-    // Si esta ES la pestaña activa
-    if (activeTabId === TAB_ID) {
-      return true;
-    }
-    
-    // Verificar si la pestaña activa anterior sigue viva
-    if (lastHeartbeat) {
-      const timeSinceLastHeartbeat = Date.now() - parseInt(lastHeartbeat);
-      if (timeSinceLastHeartbeat > HEARTBEAT_TIMEOUT) {
-        // La pestaña anterior murió, tomar el control
-        localStorage.setItem(ACTIVE_TAB_KEY, TAB_ID);
-        localStorage.setItem(TAB_HEARTBEAT_KEY, Date.now().toString());
-        console.log('⚠️ Pestaña anterior inactiva. Esta pestaña toma el control:', TAB_ID);
-        return true;
+      localStorage.setItem(TAB_HEARTBEAT_KEY, now.toString());
+      
+      // Solo establecer timestamp si no existe
+      if (!localStorage.getItem(TAB_TIMESTAMP_KEY)) {
+        localStorage.setItem(TAB_TIMESTAMP_KEY, now.toString());
       }
+      
+      console.log('✅ Esta pestaña tomó el control:', TAB_ID);
+      return true;
     }
-    
-    console.log('⚠️ Hay otra pestaña activa:', activeTabId);
     return false;
-  }, []);
+  }, [canBeActiveTab]);
 
-  // ✅ Función para forzar que esta pestaña sea la activa
+  // ✅ Función para FORZAR que esta pestaña sea la activa
   const forceBeActiveTab = React.useCallback(() => {
+    const now = Date.now();
     localStorage.setItem(ACTIVE_TAB_KEY, TAB_ID);
-    localStorage.setItem(TAB_HEARTBEAT_KEY, Date.now().toString());
+    localStorage.setItem(TAB_HEARTBEAT_KEY, now.toString());
+    localStorage.setItem(TAB_TIMESTAMP_KEY, now.toString());
+    
+    console.log('🔨 FORZANDO esta pestaña como activa:', TAB_ID);
+    
+    // No recargar, solo cambiar el estado
     setIsActiveTab(true);
-    console.log('✅ Forzando esta pestaña como activa:', TAB_ID);
-    window.location.reload();
+    setIsChecking(false);
+    
+    // Iniciar heartbeat
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+    }
+    heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
   }, []);
 
-  // ✅ Enviar heartbeat para mantener la pestaña activa
+  // ✅ Enviar heartbeat
   const sendHeartbeat = React.useCallback(() => {
     const activeTabId = localStorage.getItem(ACTIVE_TAB_KEY);
     if (activeTabId === TAB_ID) {
@@ -139,47 +164,61 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     let isMounted = true;
     let authSubscription: ReturnType<typeof supabase.auth.onAuthStateChange>['data']['subscription'] | null = null;
 
-    // ✅ Intentar ser la pestaña activa
-    const shouldBeActive = tryToBeActiveTab();
-    setIsActiveTab(shouldBeActive);
+    // ✅ Intentar tomar el control SIN recargar
+    if (!hasAttemptedActivation.current) {
+      hasAttemptedActivation.current = true;
+      
+      const gotControl = tryTakeControl();
+      setIsActiveTab(gotControl);
+      setIsChecking(false);
 
-    if (shouldBeActive) {
-      console.log('✅ Esta es la pestaña activa:', TAB_ID);
-      
-      // ✅ Iniciar heartbeat
-      heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
-      
-      // ✅ Verificar periódicamente si otra pestaña intenta tomar el control
-      checkActiveTabIntervalRef.current = window.setInterval(() => {
-        const activeTabId = localStorage.getItem(ACTIVE_TAB_KEY);
-        if (activeTabId !== TAB_ID) {
-          console.log('⚠️ Otra pestaña tomó el control');
-          setIsActiveTab(false);
-          if (heartbeatIntervalRef.current) {
-            clearInterval(heartbeatIntervalRef.current);
+      if (gotControl) {
+        console.log('✅ Esta es la pestaña activa:', TAB_ID);
+        
+        // Iniciar heartbeat
+        heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+        
+        // Verificar si perdemos el control
+        checkActiveTabIntervalRef.current = window.setInterval(() => {
+          const activeTabId = localStorage.getItem(ACTIVE_TAB_KEY);
+          if (activeTabId !== TAB_ID) {
+            console.log('⚠️ Otra pestaña tomó el control');
+            setIsActiveTab(false);
+            if (heartbeatIntervalRef.current) {
+              clearInterval(heartbeatIntervalRef.current);
+              heartbeatIntervalRef.current = null;
+            }
           }
-        }
-      }, HEARTBEAT_INTERVAL);
-    } else {
-      console.warn('⚠️ Esta pestaña está inactiva');
-      
-      // ✅ Verificar periódicamente si podemos tomar el control
-      checkActiveTabIntervalRef.current = window.setInterval(() => {
-        const canBeActive = tryToBeActiveTab();
-        if (canBeActive) {
-          console.log('✅ Esta pestaña ahora puede ser activa');
-          window.location.reload();
-        }
-      }, HEARTBEAT_INTERVAL);
+        }, HEARTBEAT_INTERVAL);
+      } else {
+        console.warn('⚠️ Esta pestaña NO es activa. Esperando...');
+        
+        // Verificar periódicamente si la pestaña activa murió
+        checkActiveTabIntervalRef.current = window.setInterval(() => {
+          if (canBeActiveTab() && !isActiveTab) {
+            console.log('✅ La pestaña activa murió. Esta pestaña puede tomar el control.');
+            const gotControl = tryTakeControl();
+            if (gotControl) {
+              setIsActiveTab(true);
+              // Iniciar heartbeat
+              heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+            }
+          }
+        }, HEARTBEAT_INTERVAL);
+      }
     }
 
-    // ✅ Escuchar cambios en localStorage (otras pestañas)
+    // ✅ Escuchar cambios en localStorage
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === ACTIVE_TAB_KEY) {
         const newActiveTab = e.newValue;
         if (newActiveTab !== TAB_ID && newActiveTab !== null) {
-          console.log('⚠️ Otra pestaña tomó el control vía storage event');
+          console.log('⚠️ Otra pestaña tomó el control vía storage');
           setIsActiveTab(false);
+          if (heartbeatIntervalRef.current) {
+            clearInterval(heartbeatIntervalRef.current);
+            heartbeatIntervalRef.current = null;
+          }
         }
       }
     };
@@ -187,8 +226,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     window.addEventListener('storage', handleStorageChange);
 
     const initializeAuth = async () => {
-      // Solo inicializar auth si esta es la pestaña activa
-      if (!shouldBeActive) {
+      // Esperar a que se determine si es activa
+      if (!isActiveTab) {
         setIsLoading(false);
         return;
       }
@@ -218,7 +257,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
 
-      // ✅ Solo suscribirse a cambios de auth en la pestaña activa
+      // Solo suscribirse en la pestaña activa
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, currentSession) => {
           if (!isMounted) return;
@@ -249,8 +288,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (isMounted) {
               setUser(null);
               localStorage.removeItem('current_user_id');
-              localStorage.removeItem(ACTIVE_TAB_KEY);
-              localStorage.removeItem(TAB_HEARTBEAT_KEY);
             }
           }
 
@@ -263,9 +300,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       authSubscription = subscription;
     };
 
-    initializeAuth();
+    // Solo inicializar auth si es la pestaña activa
+    if (isActiveTab) {
+      initializeAuth();
+    }
 
-    // ✅ Cleanup mejorado
+    // Cleanup
     return () => {
       isMounted = false;
       
@@ -288,12 +328,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (activeTabId === TAB_ID) {
         localStorage.removeItem(ACTIVE_TAB_KEY);
         localStorage.removeItem(TAB_HEARTBEAT_KEY);
+        // NO limpiar TAB_TIMESTAMP_KEY para mantener la referencia
       }
     };
-  }, [fetchProfile, validateUserSession, tryToBeActiveTab, sendHeartbeat]);
+  }, [isActiveTab, fetchProfile, validateUserSession, tryTakeControl, canBeActiveTab, sendHeartbeat]);
 
-  // ✅ Si no es la pestaña activa, mostrar mensaje
-  if (!isActiveTab && !isLoading) {
+  // ✅ Pantalla de carga inicial
+  if (isChecking) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-cyan-50">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '300ms'}} />
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Si no es la pestaña activa, mostrar mensaje (SIN bucle infinito)
+  if (!isActiveTab) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
         <div className="max-w-md w-full mx-4">
@@ -311,28 +365,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               
               <p className="text-slate-600">
                 Ya tienes una sesión abierta en otra pestaña del navegador. 
-                Por favor, cierra las demás pestañas o usa esta pestaña.
+                Cierra la otra pestaña primero, o fuerza el uso de esta.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-3 w-full mt-4">
+              <div className="flex flex-col gap-3 w-full mt-4">
                 <button
                   onClick={forceBeActiveTab}
-                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
                 >
-                  Usar Esta Pestaña
+                  🔨 Usar Esta Pestaña (Forzar)
                 </button>
                 
                 <button
                   onClick={() => window.close()}
-                  className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-3 px-6 rounded-lg transition-colors"
+                  className="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-3 px-6 rounded-lg transition-colors"
                 >
-                  Cerrar
+                  Cerrar Esta Pestaña
                 </button>
               </div>
 
-              <p className="text-xs text-slate-400 mt-4">
-                Esta restricción ayuda a prevenir conflictos y errores en la aplicación.
-              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+                <p className="text-xs text-blue-700">
+                  💡 <strong>Consejo:</strong> Cierra las demás pestañas primero. Si usas "Forzar", la otra pestaña se volverá inactiva.
+                </p>
+              </div>
             </div>
           </div>
         </div>
