@@ -41,7 +41,7 @@ export default function LiquidationSection({
   const retencion = montoFactNum * 0.05; 
   const montoIndemniz = montoAmp - retencion;
 
-  // Sincronización con el estado
+  // Sincronización con el estado global
   React.useEffect(() => {
     if (
       data.monto_amp !== String(montoAmp) || 
@@ -55,14 +55,15 @@ export default function LiquidationSection({
     }
   }, [montoAmp, montoIndemniz]);
 
-  // --- NOMBRES PARA LAS BARRAS ---
+  // --- NOMBRES Y VALIDACIONES ---
   const montosCoinciden = Math.abs(montoAmp - montoFactNum) < 0.01;
   
-  const receptorNombre = allUsers?.find((u: any) => u.id === currentBill?.analyst_receptor_id)?.full_name || 'N/A';
-  
-  const liquidadorNombre = allUsers?.find((u: any) => u.id === data.analyst_liquidador)?.full_name || 
-                           allUsers?.find((u: any) => u.id === currentBill?.analyst_severance)?.full_name || 
-                           'Pendiente por liquidar';
+  const receptorNombre = allUsers?.find((u: any) => u.id === currentBill?.analyst_receptor_id)?.full_name || 'Diego Lopez';
+
+  const getLiquidadorName = () => {
+    const user = allUsers?.find((u: any) => u.id === (data.analyst_liquidador || currentBill?.analyst_severance));
+    return user ? user.full_name : 'Pendiente por liquidar';
+  };
 
   if (!billExists) return null;
 
@@ -70,9 +71,9 @@ export default function LiquidationSection({
     <div className="space-y-6">
       {/* BARRA GRIS SUPERIOR (Estado y Acceso) */}
       <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg flex justify-between text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-        <span>Acceso: <span className="text-slate-700">{userRole || 'Admin'}</span></span>
-        <span>Estado Factura: <span className="text-blue-600">{billState || 'Nuevo'}</span></span>
-        <span>Receptor Original: <span className="text-slate-700">{receptorNombre}</span></span>
+        <span>Acceso: <span className="text-slate-800">{userRole || 'Admin'}</span></span>
+        <span>Estado Factura: <span className="text-blue-600">{billState || 'Pendiente'}</span></span>
+        <span>Receptor Original: <span className="text-slate-800">{receptorNombre}</span></span>
       </div>
 
       {/* CARD PRINCIPAL BLANCA */}
@@ -143,8 +144,8 @@ export default function LiquidationSection({
           />
         </div>
 
-        {/* BLOQUE DE ANALISTA INFERIOR (ESTILO IMAGEN 2) */}
-        <div className="md:col-span-2 bg-slate-50 border border-slate-100 rounded-lg p-4 flex items-center justify-between mt-4">
+        {/* --- SECCIÓN DE ANALISTA LIQUIDADOR (ESTILO IMAGEN 2) --- */}
+        <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 flex items-center justify-between">
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-tight mb-1">
               Analista Liquidador
@@ -152,12 +153,12 @@ export default function LiquidationSection({
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
               <span className="text-sm font-semibold text-slate-700">
-                {liquidadorNombre}
+                {getLiquidadorName()}
               </span>
             </div>
           </div>
-          <p className="text-[11px] text-slate-400 italic max-w-[200px] text-right">
-            Se registrará automáticamente tu usuario al guardar la liquidación.
+          <p className="text-[11px] text-slate-400 italic max-w-[150px] text-right">
+            Se registrará automáticamente al guardar la liquidación.
           </p>
         </div>
       </div>
