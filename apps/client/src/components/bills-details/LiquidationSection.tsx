@@ -22,42 +22,38 @@ export default function LiquidationSection({
 }: any) {
   const [modalOpen, setModalOpen] = React.useState(false);
 
-  // --- LÓGICA PARA EVITAR EL "08" (REEMPLAZAR EL 0 INICIAL) ---
+  // --- LÓGICA PARA REEMPLAZAR EL "0" INICIAL ---
   const handleInputChange = (fieldName: string, value: string) => {
     let cleanValue = value;
-    // Si el valor actual es '0' y el usuario escribe algo nuevo, quitamos el '0'
     if ((data[fieldName] === '0' || data[fieldName] === 0) && value.length > 1) {
       cleanValue = value.replace(/^0+/, '');
     }
     setData({ ...data, [fieldName]: cleanValue });
   };
 
-  // --- CÁLCULOS EN TIEMPO REAL ---
+  // --- CÁLCULOS DINÁMICOS ---
   const montoFactNum = parseFloat(data.monto_fact) || 0;
   const gna = parseFloat(data.gna) || 0;
   const honorarios = parseFloat(data.honorarios_medic) || 0;
   const servicios = parseFloat(data.servicios_clinicos) || 0;
 
   const montoAmp = gna + honorarios + servicios;
-  const retencion = montoFactNum * 0.05; // Coincide con la DB (total_billing * 0.05)
+  const retencion = montoFactNum * 0.05; // Cálculo espejo de la DB
   const montoIndemniz = montoAmp - retencion;
 
-  // --- USO DE VARIABLES PARA QUITAR ADVERTENCIAS AMARILLAS ---
-  const receptorId = currentBill?.analyst_receptor_id;
-  const analistaReceptor = allUsers?.find((u: any) => u.id === receptorId)?.name || 'N/A';
-
-  // Validación: Los componentes deben sumar exactamente el monto facturado
+  // --- LIMPIEZA DE ADVERTENCIAS ---
+  const receptorNombre = allUsers?.find((u: any) => u.id === currentBill?.analyst_receptor_id)?.name || 'N/A';
   const montosCoinciden = Math.abs(montoAmp - montoFactNum) < 0.01;
 
   if (!billExists) return null;
 
   return (
     <div className="space-y-6">
-      {/* Banner de metadatos (Usa userRole, billState y analistaReceptor) */}
-      <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg flex justify-between items-center text-[11px] text-slate-500 uppercase font-bold tracking-wider">
-        <span>Sesión: {userRole}</span>
-        <span>Estado: {billState}</span>
-        <span>Originalmente Recibido por: {analistaReceptor}</span>
+      {/* Banner de Info para usar variables amarillas */}
+      <div className="bg-slate-50 border border-slate-200 p-2 rounded-lg flex justify-between text-[10px] text-slate-500 font-bold uppercase">
+        <span>Acceso: {userRole}</span>
+        <span>Estado Factura: {billState || 'Nuevo'}</span>
+        <span>Receptor Original: {receptorNombre}</span>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-8 space-y-7">
@@ -79,9 +75,6 @@ export default function LiquidationSection({
             <div className={`p-2.5 rounded-lg border font-bold ${montosCoinciden ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
               {montoAmp.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
             </div>
-            {!montosCoinciden && (
-              <span className="text-[10px] text-red-500 italic">Debe ser igual al Monto Facturado</span>
-            )}
           </div>
           <Input 
             label="GNA" 
@@ -108,7 +101,7 @@ export default function LiquidationSection({
             disabled={!canEdit}
           />
           <div className="space-y-1">
-            <label className="block text-sm font-bold text-slate-400">Ret. 5% (Calculado)</label>
+            <label className="block text-sm font-bold text-slate-400">Retención 5% (Calculada)</label>
             <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-lg text-slate-500">
               {retencion.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
             </div>
@@ -133,21 +126,14 @@ export default function LiquidationSection({
 
       <div className="flex justify-end">
         <Button 
-          onClick={() => {
-            // Pasamos los datos calculados a la función onSave
-            onSave({
-              ...data,
-              monto_amp: montoAmp,
-              monto_indemniz: montoIndemniz
-            });
-          }}
-          disabled={loading || !canEdit || !montosCoinciden || !data.tipo_siniestro || !data.nomenclature_pile}
+          onClick={() => onSave({ ...data, monto_amp: montoAmp, monto_indemniz: montoIndemniz })}
+          disabled={loading || !canEdit || !montosCoinciden || !data.tipo_siniestro}
         >
           {loading ? 'Guardando...' : 'Guardar Liquidación'}
         </Button>
       </div>
 
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} message="Error en la validación de montos" type="error" />
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} message="Error" type="error" />
     </div>
   );
 }
