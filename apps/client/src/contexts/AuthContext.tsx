@@ -52,8 +52,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
+  // ✅ Nueva función para validar cambio de usuario
+  const validateUserSession = React.useCallback(async (currentUserId: string): Promise<boolean> => {
+    const storedUserId = localStorage.getItem('current_user_id');
+    
+    // Si hay un usuario diferente almacenado, cerrar sesión
+    if (storedUserId && storedUserId !== currentUserId) {
+      console.warn('⚠️ Detectado cambio de usuario. Cerrando sesión anterior...');
+      
+      // Limpiar todo
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Cerrar sesión en Supabase
+      await supabase.auth.signOut();
+      
+      // Recargar la página para limpiar el estado
+      window.location.href = '/login';
+      
+      return false;
+    }
+    
+    // Guardar el ID del usuario actual
+    localStorage.setItem('current_user_id', currentUserId);
+    return true;
+  }, []);
+
   React.useEffect(() => {
-    // 🔥 FLAG para evitar actualizaciones después del desmontaje
     let isMounted = true;
     let authSubscription: ReturnType<typeof supabase.auth.onAuthStateChange>['data']['subscription'] | null = null;
 
@@ -62,9 +87,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // 1. Verificar sesión inicial
         const { data: { session: initialSession } } = await supabase.auth.getSession();
 
-        if (!isMounted) return; // 🛡️ Salir si el componente se desmontó
+        if (!isMounted) return;
 
         if (initialSession?.user) {
+          // ✅ Validar que no haya cambio de usuario
+          const isValid = await validateUserSession(initialSession.user.id);
+          
+          if (!isValid || !isMounted) return;
+
           const userWithProfile = await fetchProfile(initialSession.user);
           
           if (isMounted) {
@@ -83,7 +113,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // 2. Escuchar cambios de autenticación
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, currentSession) => {
-          if (!isMounted) return; // 🛡️ Ignorar eventos si el componente se desmontó
+          if (!isMounted) return;
 
           console.log('🔔 Auth event:', event);
 
@@ -91,12 +121,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setSession(currentSession);
 
           if (currentSession?.user) {
+            // ✅ Validar cambio de usuario en cada evento de autenticación
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+              const isValid = await validateUserSession(currentSession.user.id);
+              
+              if (!isValid || !isMounted) return;
+            }
+
             // Solo hacer delay en eventos específicos
             if (event === 'SIGNED_IN') {
               await new Promise((resolve) => setTimeout(resolve, 500));
             }
 
-            if (!isMounted) return; // 🛡️ Verificar de nuevo después del delay
+            if (!isMounted) return;
 
             const userWithProfile = await fetchProfile(currentSession.user);
             
@@ -107,6 +144,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             // Usuario cerró sesión
             if (isMounted) {
               setUser(null);
+              // ✅ Limpiar el ID almacenado
+              localStorage.removeItem('current_user_id');
             }
           }
 
@@ -121,14 +160,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     initializeAuth();
 
-    // 🔥 CLEANUP: Limpiar suscripción cuando el componente se desmonte
     return () => {
       isMounted = false;
       if (authSubscription) {
         authSubscription.unsubscribe();
       }
     };
-  }, [fetchProfile]); // ✅ fetchProfile es estable gracias a useCallback
+  }, [fetchProfile, validateUserSession]);
 
   return (
     <AuthContext.Provider
