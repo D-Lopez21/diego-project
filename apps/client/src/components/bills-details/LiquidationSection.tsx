@@ -31,7 +31,7 @@ export default function LiquidationSection({
     setData({ ...data, [fieldName]: cleanValue });
   };
 
-  // --- CÁLCULOS DINÁMICOS Y SINCRONIZACIÓN CON EL ESTADO ---
+  // --- CÁLCULOS DINÁMICOS ---
   const montoFactNum = parseFloat(data.monto_fact) || 0;
   const gna = parseFloat(data.gna) || 0;
   const honorarios = parseFloat(data.honorarios_medic) || 0;
@@ -41,7 +41,7 @@ export default function LiquidationSection({
   const retencion = montoFactNum * 0.05; 
   const montoIndemniz = montoAmp - retencion;
 
-  // Sincronizar con el estado global cada vez que cambien los números
+  // Sincronización con el estado
   React.useEffect(() => {
     if (
       data.monto_amp !== String(montoAmp) || 
@@ -55,20 +55,27 @@ export default function LiquidationSection({
     }
   }, [montoAmp, montoIndemniz]);
 
-  // --- LIMPIEZA DE ADVERTENCIAS ---
-  const receptorNombre = allUsers?.find((u: any) => u.id === currentBill?.analyst_receptor_id)?.name || 'N/A';
+  // --- NOMBRES PARA LAS BARRAS ---
   const montosCoinciden = Math.abs(montoAmp - montoFactNum) < 0.01;
+  
+  const receptorNombre = allUsers?.find((u: any) => u.id === currentBill?.analyst_receptor_id)?.full_name || 'N/A';
+  
+  const liquidadorNombre = allUsers?.find((u: any) => u.id === data.analyst_liquidador)?.full_name || 
+                           allUsers?.find((u: any) => u.id === currentBill?.analyst_severance)?.full_name || 
+                           'Pendiente por liquidar';
 
   if (!billExists) return null;
 
   return (
     <div className="space-y-6">
-      <div className="bg-slate-50 border border-slate-200 p-2 rounded-lg flex justify-between text-[10px] text-slate-500 font-bold uppercase">
-        <span>Acceso: {userRole}</span>
-        <span>Estado Factura: {billState || 'Nuevo'}</span>
-        <span>Receptor Original: {receptorNombre}</span>
+      {/* BARRA GRIS SUPERIOR (Estado y Acceso) */}
+      <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg flex justify-between text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+        <span>Acceso: <span className="text-slate-700">{userRole || 'Admin'}</span></span>
+        <span>Estado Factura: <span className="text-blue-600">{billState || 'Nuevo'}</span></span>
+        <span>Receptor Original: <span className="text-slate-700">{receptorNombre}</span></span>
       </div>
 
+      {/* CARD PRINCIPAL BLANCA */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-8 space-y-7">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Input label="Fecha de Liquidación" value={data.fecha_liquidacion} disabled readOnly />
@@ -135,11 +142,30 @@ export default function LiquidationSection({
             disabled={!canEdit}
           />
         </div>
+
+        {/* BLOQUE DE ANALISTA INFERIOR (ESTILO IMAGEN 2) */}
+        <div className="md:col-span-2 bg-slate-50 border border-slate-100 rounded-lg p-4 flex items-center justify-between mt-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-tight mb-1">
+              Analista Liquidador
+            </label>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <span className="text-sm font-semibold text-slate-700">
+                {liquidadorNombre}
+              </span>
+            </div>
+          </div>
+          <p className="text-[11px] text-slate-400 italic max-w-[200px] text-right">
+            Se registrará automáticamente tu usuario al guardar la liquidación.
+          </p>
+        </div>
       </div>
 
+      {/* BOTÓN DE ACCIÓN */}
       <div className="flex justify-end">
         <Button 
-          onClick={() => onSave(data)} // Enviamos 'data' porque ya está actualizado por el useEffect
+          onClick={() => onSave(data)} 
           disabled={loading || !canEdit || !montosCoinciden || !data.tipo_siniestro}
         >
           {loading ? 'Guardando...' : 'Guardar Liquidación'}

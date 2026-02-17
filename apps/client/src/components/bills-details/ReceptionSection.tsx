@@ -155,29 +155,29 @@ export default function ReceptionSection({
           ]}
         />
 
-<div className="relative">
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Monto Total Facturado
-  </label>
-  <div className="relative flex items-center"> {/* Agregamos flex e items-center aquí */}
-    <input
-      type="text"
-      placeholder="0,00"
-      disabled={isReadOnly}
-      value={isReadOnly ? formatCurrency(data.total_billing) : data.total_billing}
-      onChange={(e) => {
-        const val = e.target.value.replace(/[^0-9.]/g, '');
-        setData({ ...data, total_billing: val });
-      }}
-      className={`w-full px-4 py-2.5 pr-12 bg-white border border-slate-200 rounded-lg outline-none transition-all
-        ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'focus:ring-2 focus:ring-blue-500'}
-        appearance-none`}
-    />
-    <span className="absolute right-3 flex items-center pointer-events-none text-xs font-bold text-slate-400 uppercase">
-      {data.currency_type}
-    </span>
+  <div className="relative">
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      Monto Total Facturado
+    </label>
+    <div className="relative flex items-center"> {/* Agregamos flex e items-center aquí */}
+      <input
+        type="text"
+        placeholder="0,00"
+        disabled={isReadOnly}
+        value={isReadOnly ? formatCurrency(data.total_billing) : data.total_billing}
+        onChange={(e) => {
+          const val = e.target.value.replace(/[^0-9.]/g, '');
+          setData({ ...data, total_billing: val });
+        }}
+        className={`w-full px-4 py-2.5 pr-12 bg-white border border-slate-200 rounded-lg outline-none transition-all
+          ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'focus:ring-2 focus:ring-blue-500'}
+          appearance-none`}
+      />
+      <span className="absolute right-3 flex items-center pointer-events-none text-xs font-bold text-slate-400 uppercase">
+        {data.currency_type}
+      </span>
+    </div>
   </div>
-</div>
 
         {/* Sección de Analista (Destacada) */}
         <div className="md:col-span-2 bg-slate-50 border border-slate-100 rounded-lg p-4 flex items-center justify-between">
