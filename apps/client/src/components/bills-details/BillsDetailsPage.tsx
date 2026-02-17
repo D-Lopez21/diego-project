@@ -72,7 +72,7 @@ export default function BillsDetailsPage({
     gna: '0',
     honorarios_medic: '0',
     servicios_clinicos: '0',
-    retention_rate: '',
+    retention_rate: '0', // ✅ Inicializado en '0'
     monto_indemniz: '0',
     nomenclature_pile: '',
     analyst_liquidador: '',
@@ -202,7 +202,7 @@ export default function BillsDetailsPage({
           gna: data.gna != null ? String(data.gna) : '0',
           honorarios_medic: data.medical_honoraries != null ? String(data.medical_honoraries) : '0',
           servicios_clinicos: data.clinical_services != null ? String(data.clinical_services) : '0',
-          retention_rate: data.retention_rate != null ? String(data.retention_rate) : '',
+          retention_rate: data.retention_rate != null ? String(data.retention_rate) : '0', // ✅ Carga correcta
           monto_indemniz: data.indemnizable_rate != null ? String(data.indemnizable_rate) : '0',
           nomenclature_pile: data.nomenclature_pile || '',
           analyst_liquidador: data.analyst_severance || '',
@@ -222,7 +222,7 @@ export default function BillsDetailsPage({
         setEjecucionData({
           fecha_pago: data.paid_date ? formatDateForInput(data.paid_date) : '',
           monto_bs: data.bs_amount != null ? String(data.bs_amount) : '',
-          tcr: data.tcr_amount != null ? String(data.tcr_amount) : '',  // ✅ CORREGIDO: Leer de tcr_amount
+          tcr: data.tcr_amount != null ? String(data.tcr_amount) : '',
           ref_en_dolares: data.dollar_amount != null ? String(data.dollar_amount) : '',
           ref_bancaria: data.transfer_ref || '',
           diferencia_vertice: data.vertice_difference != null ? String(data.vertice_difference) : '',
@@ -352,6 +352,7 @@ export default function BillsDetailsPage({
             gna: parseFloat(data.gna) || 0,
             medical_honoraries: parseFloat(data.honorarios_medic) || 0,
             clinical_services: parseFloat(data.servicios_clinicos) || 0,
+            retention_rate: parseFloat(data.retention_rate) || 0, // ✅ AGREGADO
             indemnizable_rate: parseFloat(data.monto_indemniz) || 0,
             nomenclature_pile: data.nomenclature_pile || null,
             analyst_severance: currentUserId,
@@ -379,7 +380,7 @@ export default function BillsDetailsPage({
           updatePayload = {
             paid_date: new Date().toISOString(),
             bs_amount: parseFloat(data.monto_bs) || 0,
-            tcr_amount: parseFloat(data.tcr) || 0,  // ✅ CORREGIDO: Guardar en tcr_amount
+            tcr_amount: parseFloat(data.tcr) || 0,
             dollar_amount: parseFloat(data.ref_en_dolares) || 0,
             transfer_ref: data.ref_bancaria || null,
             vertice_difference: parseFloat(data.diferencia_vertice) || 0,
