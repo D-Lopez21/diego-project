@@ -31,15 +31,29 @@ export default function LiquidationSection({
     setData({ ...data, [fieldName]: cleanValue });
   };
 
-  // --- CÁLCULOS DINÁMICOS ---
+  // --- CÁLCULOS DINÁMICOS Y SINCRONIZACIÓN CON EL ESTADO ---
   const montoFactNum = parseFloat(data.monto_fact) || 0;
   const gna = parseFloat(data.gna) || 0;
   const honorarios = parseFloat(data.honorarios_medic) || 0;
   const servicios = parseFloat(data.servicios_clinicos) || 0;
 
   const montoAmp = gna + honorarios + servicios;
-  const retencion = montoFactNum * 0.05; // Cálculo espejo de la DB
+  const retencion = montoFactNum * 0.05; 
   const montoIndemniz = montoAmp - retencion;
+
+  // Sincronizar con el estado global cada vez que cambien los números
+  React.useEffect(() => {
+    if (
+      data.monto_amp !== String(montoAmp) || 
+      data.monto_indemniz !== String(montoIndemniz)
+    ) {
+      setData({
+        ...data,
+        monto_amp: String(montoAmp),
+        monto_indemniz: String(montoIndemniz)
+      });
+    }
+  }, [montoAmp, montoIndemniz]);
 
   // --- LIMPIEZA DE ADVERTENCIAS ---
   const receptorNombre = allUsers?.find((u: any) => u.id === currentBill?.analyst_receptor_id)?.name || 'N/A';
@@ -49,7 +63,6 @@ export default function LiquidationSection({
 
   return (
     <div className="space-y-6">
-      {/* Banner de Info para usar variables amarillas */}
       <div className="bg-slate-50 border border-slate-200 p-2 rounded-lg flex justify-between text-[10px] text-slate-500 font-bold uppercase">
         <span>Acceso: {userRole}</span>
         <span>Estado Factura: {billState || 'Nuevo'}</span>
@@ -126,7 +139,7 @@ export default function LiquidationSection({
 
       <div className="flex justify-end">
         <Button 
-          onClick={() => onSave({ ...data, monto_amp: montoAmp, monto_indemniz: montoIndemniz })}
+          onClick={() => onSave(data)} // Enviamos 'data' porque ya está actualizado por el useEffect
           disabled={loading || !canEdit || !montosCoinciden || !data.tipo_siniestro}
         >
           {loading ? 'Guardando...' : 'Guardar Liquidación'}

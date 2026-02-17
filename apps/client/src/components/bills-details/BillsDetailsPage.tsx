@@ -52,6 +52,7 @@ export default function BillsDetailsPage({
     setModalOpen(true);
   };
 
+  // --- ESTADOS DE SECCIONES ---
   const [recepcionData, setRecepcionData] = React.useState<RecepcionData>({
     arrival_date: '',
     suppliers_id: '',
@@ -105,6 +106,7 @@ export default function BillsDetailsPage({
     analyst_finiquito: '',
   });
 
+  // --- CARGA DE USUARIO Y PERMISOS ---
   React.useEffect(() => {
     const loadCurrentUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -239,11 +241,13 @@ export default function BillsDetailsPage({
     if (billId && billId !== 'create-bill') loadBillData(billId);
   }, [billId]);
 
-  const handleSaveSection = async (section: string, data: any) => {
+  // --- FUNCIÓN DE GUARDADO CORREGIDA ---
+  const handleSaveSection = async (section: string, sectionData: any) => {
     try {
       setLoading(true);
       const isCreating = !billId || billId === 'create-bill';
 
+      // Validar si la sección anterior está lista (excepto en creación)
       if (!isCreating && section !== 'recepcion') {
         const validation = isPreviousSectionCompleted(section);
         if (!validation.valid) {
@@ -254,7 +258,7 @@ export default function BillsDetailsPage({
       }
 
       if (section === 'recepcion') {
-        const amount = parseFloat(data.total_billing);
+        const amount = parseFloat(sectionData.total_billing);
         if (isNaN(amount) || amount <= 0) {
           showModal('El monto debe ser mayor a 0.', 'error');
           setLoading(false);
@@ -265,13 +269,13 @@ export default function BillsDetailsPage({
           const { data: newBill, error } = await supabase
             .from('bills')
             .insert([{
-                arrival_date: data.arrival_date || new Date().toISOString(),
-                suppliers_id: data.suppliers_id || null,
-                n_claim: data.n_claim || '',
-                type: data.type === 'DNF' ? 'DNF' : 'FACTURA',
-                n_billing: data.n_billing || '',
-                n_control: data.n_control || '',
-                currency_type: data.currency_type === 'USD' ? 'USD' : 'VES',
+                arrival_date: sectionData.arrival_date || new Date().toISOString(),
+                suppliers_id: sectionData.suppliers_id || null,
+                n_claim: sectionData.n_claim || '',
+                type: sectionData.type === 'DNF' ? 'DNF' : 'FACTURA',
+                n_billing: sectionData.n_billing || '',
+                n_control: sectionData.n_control || '',
+                currency_type: sectionData.currency_type === 'USD' ? 'USD' : 'VES',
                 total_billing: amount,
                 analyst_receptor_id: currentUserId,
                 state: 'recibida',
@@ -286,13 +290,13 @@ export default function BillsDetailsPage({
           const { error } = await supabase
             .from('bills')
             .update({
-                arrival_date: data.arrival_date,
-                suppliers_id: data.suppliers_id,
-                n_claim: data.n_claim,
-                type: data.type === 'DNF' ? 'DNF' : 'FACTURA',
-                n_billing: data.n_billing,
-                n_control: data.n_control,
-                currency_type: data.currency_type,
+                arrival_date: sectionData.arrival_date,
+                suppliers_id: sectionData.suppliers_id,
+                n_claim: sectionData.n_claim,
+                type: sectionData.type === 'DNF' ? 'DNF' : 'FACTURA',
+                n_billing: sectionData.n_billing,
+                n_control: sectionData.n_control,
+                currency_type: sectionData.currency_type,
                 total_billing: amount,
                 analyst_receptor_id: currentUserId,
                 updated_at: new Date().toISOString(),
@@ -305,17 +309,18 @@ export default function BillsDetailsPage({
       } else if (!isCreating && billId) {
         let updatePayload = {};
 
+        // --- MAPEO DE LIQUIDACIÓN CORREGIDO ---
         if (section === 'liquidacion') {
-          // SE ELIMINA retention_rate PARA EVITAR EL ERROR DE BASE DE DATOS
           updatePayload = {
             severance_date: new Date().toISOString(),
-            claim_type: data.tipo_siniestro || null,
-            monto_amp: parseFloat(data.monto_amp) || 0,
-            gna: parseFloat(data.gna) || 0,
-            medical_honoraries: parseFloat(data.honorarios_medic) || 0,
-            clinical_services: parseFloat(data.servicios_clinicos) || 0,
-            indemnizable_rate: parseFloat(data.monto_indemniz) || 0,
-            nomenclature_pile: data.nomenclature_pile || null,
+            claim_type: sectionData.tipo_siniestro || null,
+            monto_amp: parseFloat(sectionData.monto_amp) || 0,
+            gna: parseFloat(sectionData.gna) || 0,
+            medical_honoraries: parseFloat(sectionData.honorarios_medic) || 0,
+            clinical_services: parseFloat(sectionData.servicios_clinicos) || 0,
+            retention_rate: (parseFloat(sectionData.monto_fact) || 0) * 0.05,
+            indemnizable_rate: parseFloat(sectionData.monto_indemniz) || 0,
+            nomenclature_pile: sectionData.nomenclature_pile || null,
             analyst_severance: currentUserId,
             state: 'pendiente',
             state_sequence: 'liquidacion',
@@ -328,10 +333,10 @@ export default function BillsDetailsPage({
             state_sequence: 'auditoria',
           };
         } else if (section === 'programacion') {
-          const newState = data.decision_adm === 'DEVUELTO' ? 'devuelto' : 'programado';
+          const newState = sectionData.decision_adm === 'DEVUELTO' ? 'devuelto' : 'programado';
           updatePayload = {
             programmed_date: new Date().toISOString(),
-            admin_decision: data.decision_adm || null,
+            admin_decision: sectionData.decision_adm || null,
             analyst_schedule: currentUserId,
             state: newState,
             state_sequence: 'programacion',
@@ -339,12 +344,12 @@ export default function BillsDetailsPage({
         } else if (section === 'ejecucion') {
           updatePayload = {
             paid_date: new Date().toISOString(),
-            bs_amount: parseFloat(data.monto_bs) || 0,
-            tcr_amount: parseFloat(data.tcr) || 0,
-            dollar_amount: parseFloat(data.ref_en_dolares) || 0,
-            transfer_ref: data.ref_bancaria || null,
-            vertice_difference: parseFloat(data.diferencia_vertice) || 0,
-            provider_difference: parseFloat(data.diferencia_proveedor) || 0,
+            bs_amount: parseFloat(sectionData.monto_bs) || 0,
+            tcr_amount: parseFloat(sectionData.tcr) || 0,
+            dollar_amount: parseFloat(sectionData.ref_en_dolares) || 0,
+            transfer_ref: sectionData.ref_bancaria || null,
+            vertice_difference: parseFloat(sectionData.diferencia_vertice) || 0,
+            provider_difference: parseFloat(sectionData.diferencia_proveedor) || 0,
             analyst_paid: currentUserId,
             state: 'pagado',
             state_sequence: 'pagos',
@@ -398,27 +403,27 @@ export default function BillsDetailsPage({
         )}
 
         {activeSection === 'recepcion' && (
-          <ReceptionSection data={recepcionData} setData={setRecepcionData} providers={providers} allUsers={allUsers} onSave={() => handleSaveSection('recepcion', recepcionData)} isNewBill={!billExists} loading={loading} canEdit={canEditSection('recepcion')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
+          <ReceptionSection data={recepcionData} setData={setRecepcionData} providers={providers} allUsers={allUsers} onSave={(data: any) => handleSaveSection('recepcion', data)} isNewBill={!billExists} loading={loading} canEdit={canEditSection('recepcion')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
         )}
 
         {activeSection === 'liquidacion' && (
-          <LiquidationSection data={liquidacionData} setData={setLiquidacionData} onSave={() => handleSaveSection('liquidacion', liquidacionData)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('liquidacion')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
+          <LiquidationSection data={liquidacionData} setData={setLiquidacionData} onSave={(data: any) => handleSaveSection('liquidacion', data)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('liquidacion')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
         )}
 
         {activeSection === 'auditoria' && (
-          <AuditSection data={auditoriaData} setData={setAuditoriaData} onSave={() => handleSaveSection('auditoria', auditoriaData)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('auditoria')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
+          <AuditSection data={auditoriaData} setData={setAuditoriaData} onSave={(data: any) => handleSaveSection('auditoria', data)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('auditoria')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
         )}
 
         {activeSection === 'programacion' && (
-          <ScheduleSection data={programacionData} setData={setProgramacionData} onSave={() => handleSaveSection('programacion', programacionData)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('programacion')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
+          <ScheduleSection data={programacionData} setData={setProgramacionData} onSave={(data: any) => handleSaveSection('programacion', data)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('programacion')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
         )}
 
         {activeSection === 'ejecucion' && (
-          <PaymentSection data={ejecucionData} setData={setEjecucionData} onSave={() => handleSaveSection('ejecucion', ejecucionData)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('ejecucion')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
+          <PaymentSection data={ejecucionData} setData={setEjecucionData} onSave={(data: any) => handleSaveSection('ejecucion', data)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('ejecucion')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
         )}
 
         {activeSection === 'finiquito' && (
-          <FinishSection data={finiquitoData} setData={setFiniquitoData} onSave={() => handleSaveSection('finiquito', finiquitoData)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('finiquito')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
+          <FinishSection data={finiquitoData} setData={setFiniquitoData} onSave={(data: any) => handleSaveSection('finiquito', data)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('finiquito')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
         )}
       </div>
     </DashboardLayout>
