@@ -48,11 +48,17 @@ export default function LiquidationSection({
   }, [montoAmp, montoIndemniz]);
 
   const montosCoinciden = Math.abs(montoAmp - montoFactNum) < 0.01;
+
   const receptorNombre =
-    allUsers?.find((u: any) => u.id === currentBill?.analyst_receptor_id)?.full_name || 'DIEGO LOPEZ';
-  const liquidadorActual =
-    allUsers?.find((u: any) => u.id === (data.analyst_liquidador || currentBill?.analyst_severance))
-      ?.full_name || 'Pendiente';
+    allUsers?.find((u: any) => u.id === currentBill?.analyst_receptor_id)?.name || 'DIEGO LOPEZ';
+
+  // Mismo patrón que getAnalystName() en ReceptionSection
+  const getLiquidadorName = () => {
+    const analystId = data.analyst_liquidador || currentBill?.analyst_severance;
+    if (!analystId) return 'Pendiente';
+    const analyst = allUsers?.find((u: any) => u.id === analystId);
+    return analyst?.name || 'Desconocido';
+  };
 
   if (!billExists) return null;
 
@@ -71,7 +77,7 @@ export default function LiquidationSection({
         </span>
       </div>
 
-      {/* CARD PRINCIPAL — mismo patrón que ReceptionSection */}
+      {/* CARD PRINCIPAL */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
 
         {/* Header de la card */}
@@ -177,7 +183,6 @@ export default function LiquidationSection({
 
           {/* Fila 4: Monto Indemnizado y Nomenclatura de Lote */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-            {/* Monto Indemnizado */}
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Monto Indemnizado
@@ -205,8 +210,8 @@ export default function LiquidationSection({
             />
           </div>
 
-          {/* Sección Analista Liquidador — mismo patrón que ReceptionSection */}
-          <div className="md:col-span-2 bg-slate-50 border border-slate-100 rounded-lg p-4 flex items-center justify-between">
+          {/* Sección Analista Liquidador — fuera del grid, ancho completo */}
+          <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 flex items-center justify-between">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-tight mb-1">
                 Analista Liquidador
@@ -214,7 +219,7 @@ export default function LiquidationSection({
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                 <span className="text-sm font-semibold text-slate-700">
-                  {liquidadorActual}
+                  {currentBill ? getLiquidadorName() : 'Pendiente por asignar'}
                 </span>
               </div>
             </div>
