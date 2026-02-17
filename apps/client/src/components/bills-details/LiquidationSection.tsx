@@ -30,43 +30,43 @@ export default function LiquidationSection({
     setModalOpen(true);
   };
 
-  // ✅ Cálculos automáticos en tiempo real
-  useEffect(() => {
-    const montoFact  = parseFloat(data.monto_fact)        || 0;
-    const gna        = parseFloat(data.gna)               || 0;
-    const honorarios = parseFloat(data.honorarios_medic)  || 0;
-    const servicios  = parseFloat(data.servicios_clinicos) || 0;
-
-    // Ret. 5% = Monto Facturado * 0.05
-    const ret5 = montoFact * 0.05;
-
-    // Monto AMP = GNA + Honorarios Médicos + Servicios Clínicos + Ret. 5%
-    const montoAmp = gna + honorarios + servicios + ret5;
-
-    // Monto Indemnizado = Monto AMP - Ret. 5%
-    const montoIndemniz = montoAmp - ret5;
-
-    setData((prev: any) => ({
-      ...prev,
-      monto_amp:     montoAmp.toFixed(2),
-      monto_indemniz: montoIndemniz.toFixed(2),
-      retention_rate: ret5.toFixed(2),
-    }));
-  }, [data.monto_fact, data.gna, data.honorarios_medic, data.servicios_clinicos]);
-
-  // Handler para limpiar el campo cuando tiene valor "0" y se hace focus
-  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    if (e.target.value === '0') {
-      e.target.value = '';
+  // ✅ CORREGIDO: handleFocus ahora actualiza el estado también
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>, fieldName: string) => {
+    if (e.target.value === '0' || e.target.value === '0.00') {
+      setData((prev: any) => ({ ...prev, [fieldName]: '' }));
     }
   };
 
   // Handler para restaurar "0" si el campo queda vacío al perder el focus
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>, fieldName: string) => {
     if (e.target.value === '') {
-      setData({ ...data, [fieldName]: '0' });
+      setData((prev: any) => ({ ...prev, [fieldName]: '0' }));
     }
   };
+
+  // ✅ Cálculos automáticos en tiempo real
+  useEffect(() => {
+    const montoFact  = parseFloat(data.monto_fact)         || 0;
+    const gna        = parseFloat(data.gna)                || 0;
+    const honorarios = parseFloat(data.honorarios_medic)   || 0;
+    const servicios  = parseFloat(data.servicios_clinicos) || 0;
+
+    // Ret. 5% = Monto Facturado * 0.05
+    const ret5 = montoFact * 0.05;
+
+    // ✅ Monto AMP = GNA + Honorarios Médicos + Servicios Clínicos (SIN Ret. 5%)
+    const montoAmp = gna + honorarios + servicios;
+
+    // Monto Indemnizado = Monto AMP - Ret. 5%
+    const montoIndemniz = montoAmp - ret5;
+
+    setData((prev: any) => ({
+      ...prev,
+      monto_amp:      montoAmp.toFixed(2),
+      monto_indemniz: montoIndemniz.toFixed(2),
+      retention_rate: ret5.toFixed(2),
+    }));
+  }, [data.monto_fact, data.gna, data.honorarios_medic, data.servicios_clinicos]);
 
   if (!billExists) {
     return (
@@ -100,11 +100,11 @@ export default function LiquidationSection({
     );
   };
 
-  // ✅ Valores calculados para mostrar en pantalla
-  const montoFact  = parseFloat(data.monto_fact)         || 0;
-  const ret5       = montoFact * 0.05;
-  const montoAmp   = parseFloat(data.monto_amp)          || 0;
-  const montoIndemniz = parseFloat(data.monto_indemniz)  || 0;
+  // Valores calculados para mostrar en pantalla
+  const montoFact     = parseFloat(data.monto_fact)     || 0;
+  const ret5          = montoFact * 0.05;
+  const montoAmp      = parseFloat(data.monto_amp)      || 0;
+  const montoIndemniz = parseFloat(data.monto_indemniz) || 0;
 
   const formatNumber = (value: number) =>
     value.toLocaleString('es-VE', { minimumFractionDigits: 2 });
@@ -163,7 +163,7 @@ export default function LiquidationSection({
           </div>
 
           <div className="p-8 space-y-7">
-            {/* Fila 1: Fecha (40%) y Tipo Siniestro (60%) */}
+            {/* Fila 1: Fecha y Tipo Siniestro */}
             <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
               <div className="md:col-span-4">
                 <label className="block text-sm font-bold text-slate-700 mb-1">Fecha de Liquidación</label>
@@ -185,14 +185,14 @@ export default function LiquidationSection({
               </div>
             </div>
 
-            {/* Fila 2: Montos Principales */}
+            {/* Fila 2: Monto Facturado, Monto AMP (auto), GNA */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Input
                 label="Monto Facturado *"
                 type="number"
                 value={data.monto_fact}
                 onChange={(e) => setData({ ...data, monto_fact: e.target.value })}
-                onFocus={handleFocus}
+                onFocus={(e) => handleFocus(e, 'monto_fact')}
                 onBlur={(e) => handleBlur(e, 'monto_fact')}
                 disabled={isReadOnly}
               />
@@ -211,7 +211,7 @@ export default function LiquidationSection({
                   readOnly
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed outline-none"
                 />
-                <p className="text-[10px] text-slate-400 mt-1">GNA + Hon. Médicos + Serv. Clínicos + Ret. 5%</p>
+                <p className="text-[10px] text-slate-400 mt-1">GNA + Hon. Médicos + Serv. Clínicos</p>
               </div>
 
               <Input
@@ -219,20 +219,20 @@ export default function LiquidationSection({
                 type="number"
                 value={data.gna || '0'}
                 onChange={(e) => setData({ ...data, gna: e.target.value })}
-                onFocus={handleFocus}
+                onFocus={(e) => handleFocus(e, 'gna')}
                 onBlur={(e) => handleBlur(e, 'gna')}
                 disabled={isReadOnly}
               />
             </div>
 
-            {/* Fila 3: Detalles Clínicos y Retención */}
+            {/* Fila 3: Honorarios, Servicios Clínicos, Ret. 5% */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Input
                 label="Honorarios Médicos"
                 type="number"
                 value={data.honorarios_medic || '0'}
                 onChange={(e) => setData({ ...data, honorarios_medic: e.target.value })}
-                onFocus={handleFocus}
+                onFocus={(e) => handleFocus(e, 'honorarios_medic')}
                 onBlur={(e) => handleBlur(e, 'honorarios_medic')}
                 disabled={isReadOnly}
               />
@@ -241,7 +241,7 @@ export default function LiquidationSection({
                 type="number"
                 value={data.servicios_clinicos || '0'}
                 onChange={(e) => setData({ ...data, servicios_clinicos: e.target.value })}
-                onFocus={handleFocus}
+                onFocus={(e) => handleFocus(e, 'servicios_clinicos')}
                 onBlur={(e) => handleBlur(e, 'servicios_clinicos')}
                 disabled={isReadOnly}
               />
@@ -264,7 +264,7 @@ export default function LiquidationSection({
               </div>
             </div>
 
-            {/* Fila 4: Indemnización y Lote */}
+            {/* Fila 4: Monto Indemnizado (auto) y Lote */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
               {/* ✅ Monto Indemnizado - Calculado automáticamente */}
