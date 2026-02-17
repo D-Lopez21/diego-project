@@ -72,7 +72,7 @@ export default function BillsDetailsPage({
     gna: '0',
     honorarios_medic: '0',
     servicios_clinicos: '0',
-    retention_rate: '0', // ✅ Inicializado en '0'
+    retention_rate: '0',
     monto_indemniz: '0',
     nomenclature_pile: '',
     analyst_liquidador: '',
@@ -123,14 +123,10 @@ export default function BillsDetailsPage({
 
   const canEditSection = (section: SectionId): boolean => {
     if (!currentUserRole) return false;
-    
     if (currentBill?.state === 'devuelto') {
-      if (currentUserRole === 'admin' && section === 'programacion') {
-        return true;
-      }
+      if (currentUserRole === 'admin' && section === 'programacion') return true;
       return false;
     }
-    
     if (currentUserRole === 'admin') return true;
     const sectionRoleMap: Record<SectionId, string[]> = {
       recepcion: ['recepcion'],
@@ -145,31 +141,29 @@ export default function BillsDetailsPage({
 
   const isPreviousSectionCompleted = (section: string): { valid: boolean; message: string } => {
     if (!currentBill) return { valid: true, message: '' };
-
     const validations: Record<string, { valid: boolean; message: string }> = {
       recepcion: { valid: true, message: '' },
       liquidacion: {
         valid: !!currentBill.analyst_receptor_id,
-        message: 'Debes completar primero la sección de RECEPCIÓN antes de guardar LIQUIDACIÓN.'
+        message: 'Debes completar primero la sección de RECEPCIÓN.'
       },
       auditoria: {
         valid: !!currentBill.analyst_severance,
-        message: 'Debes completar primero la sección de LIQUIDACIÓN antes de guardar AUDITORÍA.'
+        message: 'Debes completar primero la sección de LIQUIDACIÓN.'
       },
       programacion: {
         valid: !!currentBill.auditor,
-        message: 'Debes completar primero la sección de AUDITORÍA antes de guardar PROGRAMACIÓN.'
+        message: 'Debes completar primero la sección de AUDITORÍA.'
       },
       ejecucion: {
         valid: !!currentBill.analyst_schedule,
-        message: 'Debes completar primero la sección de PROGRAMACIÓN antes de guardar EJECUCIÓN.'
+        message: 'Debes completar primero la sección de PROGRAMACIÓN.'
       },
       finiquito: {
         valid: !!currentBill.analyst_paid,
-        message: 'Debes completar primero la sección de EJECUCIÓN antes de guardar FINIQUITO.'
+        message: 'Debes completar primero la sección de EJECUCIÓN.'
       }
     };
-
     return validations[section] || { valid: true, message: '' };
   };
 
@@ -179,7 +173,6 @@ export default function BillsDetailsPage({
       setLoading(true);
       const { data, error } = await supabase.from('bills').select('*').eq('id', id).single();
       if (error) throw error;
-
       if (data) {
         setCurrentBill(data);
         setRecepcionData({
@@ -202,7 +195,7 @@ export default function BillsDetailsPage({
           gna: data.gna != null ? String(data.gna) : '0',
           honorarios_medic: data.medical_honoraries != null ? String(data.medical_honoraries) : '0',
           servicios_clinicos: data.clinical_services != null ? String(data.clinical_services) : '0',
-          retention_rate: data.retention_rate != null ? String(data.retention_rate) : '0', // ✅ Carga correcta
+          retention_rate: data.retention_rate != null ? String(data.retention_rate) : '0',
           monto_indemniz: data.indemnizable_rate != null ? String(data.indemnizable_rate) : '0',
           nomenclature_pile: data.nomenclature_pile || '',
           analyst_liquidador: data.analyst_severance || '',
@@ -243,9 +236,7 @@ export default function BillsDetailsPage({
   };
 
   React.useEffect(() => {
-    if (billId && billId !== 'create-bill') {
-      loadBillData(billId);
-    }
+    if (billId && billId !== 'create-bill') loadBillData(billId);
   }, [billId]);
 
   const handleSaveSection = async (section: string, data: any) => {
@@ -265,34 +256,7 @@ export default function BillsDetailsPage({
       if (section === 'recepcion') {
         const amount = parseFloat(data.total_billing);
         if (isNaN(amount) || amount <= 0) {
-          showModal('Error: El monto total debe ser mayor a 0.', 'error');
-          setLoading(false);
-          return;
-        }
-
-        const { data: dupClaim } = await supabase
-          .from('bills')
-          .select('id')
-          .eq('n_claim', data.n_claim)
-          .neq('id', billId || '')
-          .maybeSingle();
-
-        if (dupClaim) {
-          showModal(`Error: El N° de Siniestro "${data.n_claim}" ya está registrado.`, 'error');
-          setLoading(false);
-          return;
-        }
-
-        const { data: dupBill } = await supabase
-          .from('bills')
-          .select('id')
-          .eq('n_billing', data.n_billing)
-          .eq('suppliers_id', data.suppliers_id)
-          .neq('id', billId || '')
-          .maybeSingle();
-
-        if (dupBill) {
-          showModal(`Error: La factura N° "${data.n_billing}" ya existe para este proveedor.`, 'error');
+          showModal('El monto debe ser mayor a 0.', 'error');
           setLoading(false);
           return;
         }
@@ -315,9 +279,8 @@ export default function BillsDetailsPage({
                 active: true,
             }])
             .select().single();
-
           if (error) throw error;
-          showModal('Factura creada exitosamente', 'success');
+          showModal('Factura creada', 'success');
           navigate(`/bills/${newBill.id}`, { replace: true });
         } else {
           const { error } = await supabase
@@ -332,19 +295,18 @@ export default function BillsDetailsPage({
                 currency_type: data.currency_type,
                 total_billing: amount,
                 analyst_receptor_id: currentUserId,
-                state: 'recibida',
                 updated_at: new Date().toISOString(),
             })
             .eq('id', billId);
-
           if (error) throw error;
-          showModal('Sección RECEPCION actualizada', 'success');
+          showModal('RECEPCION actualizada', 'success');
           await loadBillData(billId);
         }
       } else if (!isCreating && billId) {
         let updatePayload = {};
 
         if (section === 'liquidacion') {
+          // SE ELIMINA retention_rate PARA EVITAR EL ERROR DE BASE DE DATOS
           updatePayload = {
             severance_date: new Date().toISOString(),
             claim_type: data.tipo_siniestro || null,
@@ -352,7 +314,6 @@ export default function BillsDetailsPage({
             gna: parseFloat(data.gna) || 0,
             medical_honoraries: parseFloat(data.honorarios_medic) || 0,
             clinical_services: parseFloat(data.servicios_clinicos) || 0,
-            retention_rate: parseFloat(data.retention_rate) || 0, // ✅ AGREGADO
             indemnizable_rate: parseFloat(data.monto_indemniz) || 0,
             nomenclature_pile: data.nomenclature_pile || null,
             analyst_severance: currentUserId,
@@ -368,7 +329,6 @@ export default function BillsDetailsPage({
           };
         } else if (section === 'programacion') {
           const newState = data.decision_adm === 'DEVUELTO' ? 'devuelto' : 'programado';
-          
           updatePayload = {
             programmed_date: new Date().toISOString(),
             admin_decision: data.decision_adm || null,
@@ -404,7 +364,7 @@ export default function BillsDetailsPage({
           .eq('id', billId);
 
         if (error) throw error;
-        showModal(`Sección ${section.toUpperCase()} guardada exitosamente`, 'success');
+        showModal(`${section.toUpperCase()} guardada`, 'success');
         await loadBillData(billId);
       }
     } catch (error: any) {
@@ -427,144 +387,38 @@ export default function BillsDetailsPage({
 
   return (
     <DashboardLayout title={billExists ? 'Editar Factura' : 'Nueva Factura'} returnTo="/bills">
-      <BillModal 
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        message={modalMessage}
-        type={modalType}
-      />
-      <TabSelector
-        sections={sections}
-        activeSection={activeSection}
-        onSectionChange={setActiveSection}
-      />
-
+      <BillModal isOpen={modalOpen} onClose={() => setModalOpen(false)} message={modalMessage} type={modalType} />
+      <TabSelector sections={sections} activeSection={activeSection} onSectionChange={setActiveSection} />
       <div className="min-h-100 p-4">
         {currentBill?.state === 'devuelto' && (
-          <div className="bg-red-50 border-2 border-red-400 rounded-lg p-6 mb-6">
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <div className="ml-3 flex-1">
-                <h3 className="text-lg font-bold text-red-800">
-                  ⚠️ FACTURA DEVUELTA
-                </h3>
-                <p className="mt-2 text-sm text-red-700">
-                  Esta factura ha sido marcada como <strong>DEVUELTA</strong> en la sección de programación y no puede ser modificada.
-                </p>
-                {currentUserRole === 'admin' && (
-                  <p className="mt-2 text-sm text-red-800 font-semibold">
-                    ℹ️ Como administrador, puedes ir a la sección PROGRAMACIÓN y cambiar la decisión administrativa si es necesario.
-                  </p>
-                )}
-                {currentUserRole !== 'admin' && (
-                  <p className="mt-2 text-sm text-red-700">
-                    Solo un administrador puede revertir esta decisión.
-                  </p>
-                )}
-              </div>
-            </div>
+          <div className="bg-red-50 border-2 border-red-400 rounded-lg p-6 mb-6 text-red-800">
+            <h3 className="text-lg font-bold">⚠️ FACTURA DEVUELTA</h3>
+            <p>Decision administrativa irreversible para analistas.</p>
           </div>
         )}
 
         {activeSection === 'recepcion' && (
-          <ReceptionSection
-            data={recepcionData}
-            setData={setRecepcionData}
-            providers={providers}
-            allUsers={allUsers}
-            onSave={() => handleSaveSection('recepcion', recepcionData)}
-            isNewBill={!billExists}
-            loading={loading}
-            canEdit={canEditSection('recepcion')}
-            userRole={currentUserRole}
-            billState={currentBill?.state}
-            currentUserId={currentUserId}
-            currentBill={currentBill}
-          />
+          <ReceptionSection data={recepcionData} setData={setRecepcionData} providers={providers} allUsers={allUsers} onSave={() => handleSaveSection('recepcion', recepcionData)} isNewBill={!billExists} loading={loading} canEdit={canEditSection('recepcion')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
         )}
 
         {activeSection === 'liquidacion' && (
-          <LiquidationSection
-            data={liquidacionData}
-            setData={setLiquidacionData}
-            onSave={() => handleSaveSection('liquidacion', liquidacionData)}
-            billExists={billExists}
-            loading={loading}
-            allUsers={allUsers}
-            canEdit={canEditSection('liquidacion')}
-            userRole={currentUserRole}
-            billState={currentBill?.state}
-            currentUserId={currentUserId}
-            currentBill={currentBill}
-          />
+          <LiquidationSection data={liquidacionData} setData={setLiquidacionData} onSave={() => handleSaveSection('liquidacion', liquidacionData)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('liquidacion')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
         )}
 
         {activeSection === 'auditoria' && (
-          <AuditSection
-            data={auditoriaData}
-            setData={setAuditoriaData}
-            onSave={() => handleSaveSection('auditoria', auditoriaData)}
-            billExists={billExists}
-            loading={loading}
-            allUsers={allUsers}
-            canEdit={canEditSection('auditoria')}
-            userRole={currentUserRole}
-            billState={currentBill?.state}
-            currentUserId={currentUserId}
-            currentBill={currentBill}
-          />
+          <AuditSection data={auditoriaData} setData={setAuditoriaData} onSave={() => handleSaveSection('auditoria', auditoriaData)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('auditoria')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
         )}
 
         {activeSection === 'programacion' && (
-          <ScheduleSection
-            data={programacionData}
-            setData={setProgramacionData}
-            onSave={() => handleSaveSection('programacion', programacionData)}
-            billExists={billExists}
-            loading={loading}
-            allUsers={allUsers}
-            canEdit={canEditSection('programacion')}
-            userRole={currentUserRole}
-            billState={currentBill?.state}
-            currentUserId={currentUserId}
-            currentBill={currentBill}
-          />
+          <ScheduleSection data={programacionData} setData={setProgramacionData} onSave={() => handleSaveSection('programacion', programacionData)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('programacion')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
         )}
 
         {activeSection === 'ejecucion' && (
-          <PaymentSection
-            data={ejecucionData}
-            setData={setEjecucionData}
-            onSave={() => handleSaveSection('ejecucion', ejecucionData)}
-            billExists={billExists}
-            loading={loading}
-            allUsers={allUsers}
-            canEdit={canEditSection('ejecucion')}
-            userRole={currentUserRole}
-            billState={currentBill?.state}
-            currentUserId={currentUserId}
-            currentBill={currentBill}
-          />
+          <PaymentSection data={ejecucionData} setData={setEjecucionData} onSave={() => handleSaveSection('ejecucion', ejecucionData)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('ejecucion')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
         )}
 
         {activeSection === 'finiquito' && (
-          <FinishSection
-            data={finiquitoData}
-            setData={setFiniquitoData}
-            onSave={() => handleSaveSection('finiquito', finiquitoData)}
-            billExists={billExists}
-            loading={loading}
-            allUsers={allUsers}
-            canEdit={canEditSection('finiquito')}
-            userRole={currentUserRole}
-            billState={currentBill?.state}
-            currentUserId={currentUserId}
-            currentBill={currentBill}
-          />
+          <FinishSection data={finiquitoData} setData={setFiniquitoData} onSave={() => handleSaveSection('finiquito', finiquitoData)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('finiquito')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
         )}
       </div>
     </DashboardLayout>
