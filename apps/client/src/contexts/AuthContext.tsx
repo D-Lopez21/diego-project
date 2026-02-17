@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = React.useState<AuthUser | null>(null);
   const [session, setSession] = React.useState<Session | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [isActiveTab, setIsActiveTab] = React.useState(false);
+  const [isActiveTab, setIsActiveTab] = React.useState(true); // ✅ Cambiar a true por defecto
 
   const heartbeatIntervalRef = React.useRef<number | null>(null);
   const checkActiveTabIntervalRef = React.useRef<number | null>(null);
@@ -63,36 +63,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  // ✅ Función para verificar si esta pestaña es la activa
-  const checkIfActiveTab = React.useCallback(() => {
+  // ✅ Función mejorada para verificar si esta pestaña debe ser la activa
+  const tryToBeActiveTab = React.useCallback((): boolean => {
     const activeTabId = localStorage.getItem(ACTIVE_TAB_KEY);
     const lastHeartbeat = localStorage.getItem(TAB_HEARTBEAT_KEY);
     
+    // Si no hay pestaña activa, esta pestaña toma el control
     if (!activeTabId) {
-      // No hay pestaña activa, esta pestaña toma el control
       localStorage.setItem(ACTIVE_TAB_KEY, TAB_ID);
       localStorage.setItem(TAB_HEARTBEAT_KEY, Date.now().toString());
+      console.log('✅ No había pestaña activa. Esta pestaña toma el control:', TAB_ID);
       return true;
     }
     
+    // Si esta ES la pestaña activa
     if (activeTabId === TAB_ID) {
-      // Esta es la pestaña activa
       return true;
     }
     
-    // Verificar si la pestaña activa sigue viva
+    // Verificar si la pestaña activa anterior sigue viva
     if (lastHeartbeat) {
       const timeSinceLastHeartbeat = Date.now() - parseInt(lastHeartbeat);
       if (timeSinceLastHeartbeat > HEARTBEAT_TIMEOUT) {
         // La pestaña anterior murió, tomar el control
-        console.log('⚠️ Pestaña anterior inactiva, tomando control...');
         localStorage.setItem(ACTIVE_TAB_KEY, TAB_ID);
         localStorage.setItem(TAB_HEARTBEAT_KEY, Date.now().toString());
+        console.log('⚠️ Pestaña anterior inactiva. Esta pestaña toma el control:', TAB_ID);
         return true;
       }
     }
     
+    console.log('⚠️ Hay otra pestaña activa:', activeTabId);
     return false;
+  }, []);
+
+  // ✅ Función para forzar que esta pestaña sea la activa
+  const forceBeActiveTab = React.useCallback(() => {
+    localStorage.setItem(ACTIVE_TAB_KEY, TAB_ID);
+    localStorage.setItem(TAB_HEARTBEAT_KEY, Date.now().toString());
+    setIsActiveTab(true);
+    console.log('✅ Forzando esta pestaña como activa:', TAB_ID);
+    window.location.reload();
   }, []);
 
   // ✅ Enviar heartbeat para mantener la pestaña activa
@@ -128,36 +139,48 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     let isMounted = true;
     let authSubscription: ReturnType<typeof supabase.auth.onAuthStateChange>['data']['subscription'] | null = null;
 
-    // ✅ Verificar si esta pestaña es la activa
-    const isActive = checkIfActiveTab();
-    setIsActiveTab(isActive);
+    // ✅ Intentar ser la pestaña activa
+    const shouldBeActive = tryToBeActiveTab();
+    setIsActiveTab(shouldBeActive);
 
-    if (isActive) {
+    if (shouldBeActive) {
       console.log('✅ Esta es la pestaña activa:', TAB_ID);
       
       // ✅ Iniciar heartbeat
-      heartbeatIntervalRef.current = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+      heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+      
+      // ✅ Verificar periódicamente si otra pestaña intenta tomar el control
+      checkActiveTabIntervalRef.current = window.setInterval(() => {
+        const activeTabId = localStorage.getItem(ACTIVE_TAB_KEY);
+        if (activeTabId !== TAB_ID) {
+          console.log('⚠️ Otra pestaña tomó el control');
+          setIsActiveTab(false);
+          if (heartbeatIntervalRef.current) {
+            clearInterval(heartbeatIntervalRef.current);
+          }
+        }
+      }, HEARTBEAT_INTERVAL);
     } else {
-      console.warn('⚠️ Esta pestaña está inactiva. Solo una pestaña puede estar activa a la vez.');
-    }
-
-    // ✅ Verificar periódicamente si debemos tomar el control
-    checkActiveTabIntervalRef.current = setInterval(() => {
-      const shouldBeActive = checkIfActiveTab();
-      if (shouldBeActive !== isActiveTab) {
-        setIsActiveTab(shouldBeActive);
-        if (shouldBeActive) {
-          console.log('✅ Esta pestaña ahora es la activa');
+      console.warn('⚠️ Esta pestaña está inactiva');
+      
+      // ✅ Verificar periódicamente si podemos tomar el control
+      checkActiveTabIntervalRef.current = window.setInterval(() => {
+        const canBeActive = tryToBeActiveTab();
+        if (canBeActive) {
+          console.log('✅ Esta pestaña ahora puede ser activa');
           window.location.reload();
         }
-      }
-    }, HEARTBEAT_INTERVAL);
+      }, HEARTBEAT_INTERVAL);
+    }
 
     // ✅ Escuchar cambios en localStorage (otras pestañas)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === ACTIVE_TAB_KEY && e.newValue !== TAB_ID) {
-        console.log('⚠️ Otra pestaña tomó el control');
-        setIsActiveTab(false);
+      if (e.key === ACTIVE_TAB_KEY) {
+        const newActiveTab = e.newValue;
+        if (newActiveTab !== TAB_ID && newActiveTab !== null) {
+          console.log('⚠️ Otra pestaña tomó el control vía storage event');
+          setIsActiveTab(false);
+        }
       }
     };
 
@@ -165,7 +188,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const initializeAuth = async () => {
       // Solo inicializar auth si esta es la pestaña activa
-      if (!isActive) {
+      if (!shouldBeActive) {
         setIsLoading(false);
         return;
       }
@@ -196,50 +219,48 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       // ✅ Solo suscribirse a cambios de auth en la pestaña activa
-      if (isActive) {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, currentSession) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, currentSession) => {
+          if (!isMounted) return;
+
+          console.log('🔔 Auth event:', event);
+
+          setSession(currentSession);
+
+          if (currentSession?.user) {
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+              const isValid = await validateUserSession(currentSession.user.id);
+              
+              if (!isValid || !isMounted) return;
+            }
+
+            if (event === 'SIGNED_IN') {
+              await new Promise((resolve) => setTimeout(resolve, 500));
+            }
+
             if (!isMounted) return;
 
-            console.log('🔔 Auth event:', event);
-
-            setSession(currentSession);
-
-            if (currentSession?.user) {
-              if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                const isValid = await validateUserSession(currentSession.user.id);
-                
-                if (!isValid || !isMounted) return;
-              }
-
-              if (event === 'SIGNED_IN') {
-                await new Promise((resolve) => setTimeout(resolve, 500));
-              }
-
-              if (!isMounted) return;
-
-              const userWithProfile = await fetchProfile(currentSession.user);
-              
-              if (isMounted) {
-                setUser(userWithProfile);
-              }
-            } else {
-              if (isMounted) {
-                setUser(null);
-                localStorage.removeItem('current_user_id');
-                localStorage.removeItem(ACTIVE_TAB_KEY);
-                localStorage.removeItem(TAB_HEARTBEAT_KEY);
-              }
-            }
-
+            const userWithProfile = await fetchProfile(currentSession.user);
+            
             if (isMounted) {
-              setIsLoading(false);
+              setUser(userWithProfile);
+            }
+          } else {
+            if (isMounted) {
+              setUser(null);
+              localStorage.removeItem('current_user_id');
+              localStorage.removeItem(ACTIVE_TAB_KEY);
+              localStorage.removeItem(TAB_HEARTBEAT_KEY);
             }
           }
-        );
 
-        authSubscription = subscription;
-      }
+          if (isMounted) {
+            setIsLoading(false);
+          }
+        }
+      );
+
+      authSubscription = subscription;
     };
 
     initializeAuth();
@@ -269,7 +290,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.removeItem(TAB_HEARTBEAT_KEY);
       }
     };
-  }, [fetchProfile, validateUserSession, checkIfActiveTab, sendHeartbeat]);
+  }, [fetchProfile, validateUserSession, tryToBeActiveTab, sendHeartbeat]);
 
   // ✅ Si no es la pestaña activa, mostrar mensaje
   if (!isActiveTab && !isLoading) {
@@ -295,7 +316,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
               <div className="flex flex-col sm:flex-row gap-3 w-full mt-4">
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={forceBeActiveTab}
                   className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
                 >
                   Usar Esta Pestaña
