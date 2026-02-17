@@ -49,19 +49,22 @@ export default function LiquidationSection({
 
   const montosCoinciden = Math.abs(montoAmp - montoFactNum) < 0.01;
 
-  const receptorNombre =
-    allUsers?.find((u: any) => u.id === currentBill?.analyst_receptor_id)?.full_name || allUsers?.find((u: any) => u.id === currentBill?.analyst_receptor_id)?.name || 'DIEGO LOPEZ';
+  // --- NOMBRES DE ANALISTAS ---
+  // Usamos useMemo para que se recalcule cuando allUsers termine de cargar
+  const receptorNombre = React.useMemo(() => {
+    if (!allUsers?.length || !currentBill?.analyst_receptor_id) return 'Cargando...';
+    const analyst = allUsers.find((u: any) => u.id === currentBill.analyst_receptor_id);
+    return analyst?.full_name || analyst?.name || 'Desconocido';
+  }, [allUsers, currentBill?.analyst_receptor_id]);
 
-  // Mismo patrón que getAnalystName() en ReceptionSection
-const getLiquidadorName = () => {
-  const analystId = data.analyst_liquidador || currentBill?.analyst_severance;
-  console.log('analystId:', analystId);
-  console.log('allUsers:', allUsers);
-  if (!analystId) return 'Pendiente';
-  const analyst = allUsers?.find((u: any) => u.id === analystId);
-  console.log('analyst encontrado:', analyst);
-  return analyst?.full_name || analyst?.name || 'Desconocido';
-};
+  const getLiquidadorName = React.useCallback(() => {
+    const analystId = data.analyst_liquidador || currentBill?.analyst_severance;
+    if (!analystId) return 'Pendiente';
+    // Si allUsers aún no cargó, mostramos estado de carga en vez de "Desconocido"
+    if (!allUsers?.length) return 'Cargando...';
+    const analyst = allUsers.find((u: any) => u.id === analystId);
+    return analyst?.full_name || analyst?.name || 'Desconocido';
+  }, [allUsers, data.analyst_liquidador, currentBill?.analyst_severance]);
 
   if (!billExists) return null;
 
@@ -213,7 +216,7 @@ const getLiquidadorName = () => {
             />
           </div>
 
-          {/* Sección Analista Liquidador — fuera del grid, ancho completo */}
+          {/* Sección Analista Liquidador */}
           <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 flex items-center justify-between">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-tight mb-1">
