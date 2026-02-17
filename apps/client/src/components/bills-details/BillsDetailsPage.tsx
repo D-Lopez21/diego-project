@@ -222,7 +222,7 @@ export default function BillsDetailsPage({
         setEjecucionData({
           fecha_pago: data.paid_date ? formatDateForInput(data.paid_date) : '',
           monto_bs: data.bs_amount != null ? String(data.bs_amount) : '',
-          tcr: data.tcr_amount != null ? String(data.tcr_amount) : '',
+          tcr: data.tcr_amount != null ? String(data.tcr_amount) : '',  // ✅ CORREGIDO: Leer de tcr_amount
           ref_en_dolares: data.dollar_amount != null ? String(data.dollar_amount) : '',
           ref_bancaria: data.transfer_ref || '',
           diferencia_vertice: data.vertice_difference != null ? String(data.vertice_difference) : '',
@@ -379,7 +379,7 @@ export default function BillsDetailsPage({
           updatePayload = {
             paid_date: new Date().toISOString(),
             bs_amount: parseFloat(data.monto_bs) || 0,
-            tcr: parseFloat(data.tcr) || 0,
+            tcr_amount: parseFloat(data.tcr) || 0,  // ✅ CORREGIDO: Guardar en tcr_amount
             dollar_amount: parseFloat(data.ref_en_dolares) || 0,
             transfer_ref: data.ref_bancaria || null,
             vertice_difference: parseFloat(data.diferencia_vertice) || 0,
