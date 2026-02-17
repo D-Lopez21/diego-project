@@ -53,12 +53,15 @@ export default function LiquidationSection({
     allUsers?.find((u: any) => u.id === currentBill?.analyst_receptor_id)?.full_name || allUsers?.find((u: any) => u.id === currentBill?.analyst_receptor_id)?.name || 'DIEGO LOPEZ';
 
   // Mismo patrón que getAnalystName() en ReceptionSection
-  const getLiquidadorName = () => {
-    const analystId = data.analyst_liquidador || currentBill?.analyst_severance;
-    if (!analystId) return 'Pendiente';
-    const analyst = allUsers?.find((u: any) => u.id === analystId);
-    return analyst?.full_name || analyst?.name || 'Desconocido';
-  };
+const getLiquidadorName = () => {
+  const analystId = data.analyst_liquidador || currentBill?.analyst_severance;
+  console.log('analystId:', analystId);
+  console.log('allUsers:', allUsers);
+  if (!analystId) return 'Pendiente';
+  const analyst = allUsers?.find((u: any) => u.id === analystId);
+  console.log('analyst encontrado:', analyst);
+  return analyst?.full_name || analyst?.name || 'Desconocido';
+};
 
   if (!billExists) return null;
 
