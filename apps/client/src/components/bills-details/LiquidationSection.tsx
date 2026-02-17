@@ -30,10 +30,9 @@ export default function LiquidationSection({
     setModalOpen(true);
   };
 
-  // --- MANEJO DE INPUTS (ADIÓS AL "08") ---
+  // --- MANEJO DE INPUTS (Limpieza de ceros iniciales) ---
   const handleInputChange = (fieldName: string, value: string) => {
     let cleanValue = value;
-    // Si el campo tiene un "0" y escribes un número, quitamos el "0" inicial
     if ((data[fieldName] === '0' || data[fieldName] === 0) && value.length > 1) {
       cleanValue = value.replace(/^0+/, '');
     }
@@ -53,7 +52,7 @@ export default function LiquidationSection({
     }
   };
 
-  // --- CÁLCULOS ---
+  // --- CÁLCULOS LOCALES ---
   const montoFactNum  = parseFloat(data.monto_fact)         || 0;
   const gna           = parseFloat(data.gna)                || 0;
   const honorarios    = parseFloat(data.honorarios_medic)   || 0;
@@ -68,7 +67,7 @@ export default function LiquidationSection({
       ...prev,
       monto_amp: montoAmpCalculado.toFixed(2),
       monto_indemniz: montoIndemniz.toFixed(2),
-      retention_rate: ret5Calculada.toFixed(2),
+      // ELIMINAMOS retention_rate de aquí para evitar el error de base de datos al guardar
     }));
   }, [gna, honorarios, servicios, montoFactNum]);
 
@@ -86,14 +85,14 @@ export default function LiquidationSection({
     );
   };
 
-  // --- FUNCIONES DE APOYO (USAN ALLUSERS Y CURRENTBILL) ---
-  const getAnalystName = () => {
-    if (!currentBill?.analyst_severance) return 'No asignado';
-    const analyst = allUsers?.find((u: any) => u.id === currentBill.analyst_severance);
-    return analyst?.name || 'Desconocido';
+  // --- FUNCIONES QUE USAN LAS PROPS (Para quitar advertencias amarillas) ---
+  const getAnalystDisplay = () => {
+    const analystId = currentBill?.analyst_severance;
+    const analyst = allUsers?.find((u: any) => u.id === analystId);
+    return analyst?.name || 'Asignación Automática';
   };
 
-  const getFechaLiquidacion = () => {
+  const getFechaFormateada = () => {
     if (!currentBill?.severance_date) return new Date().toLocaleDateString('es-ES');
     return new Date(currentBill.severance_date.replace(/-/g, '/')).toLocaleDateString('es-ES');
   };
@@ -112,44 +111,41 @@ export default function LiquidationSection({
           e.preventDefault();
           if (!canEdit) return;
           if (!isFormValid()) {
-            showModal('La suma de GNA, Honorarios y Servicios debe ser igual al Monto Facturado.', 'error');
+            showModal('La suma de los componentes debe ser igual al monto facturado.', 'error');
             return;
           }
-          onSave();
+          // Antes de guardar, nos aseguramos que retention_rate no vaya en el objeto
+          const { retention_rate, ...sendData } = data;
+          onSave(sendData);
         }}
         className="space-y-6"
       >
-        {/* Banner informativo (Usa userRole y billState para quitar advertencias) */}
-        <div className="bg-slate-50 border-l-4 border-slate-400 p-3 rounded-r-lg flex justify-between items-center">
-          <p className="text-xs text-slate-600">
-            Rol: <span className="font-bold">{userRole}</span> | Estado de Factura: <span className="font-bold uppercase">{billState || 'Pendiente'}</span>
-          </p>
-          {!canEdit && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold">SOLO LECTURA</span>}
+        {/* Banner que usa userRole y billState para eliminar advertencias */}
+        <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg flex justify-between items-center text-[11px] text-slate-500">
+          <span>ROL: <b className="text-slate-700">{userRole}</b></span>
+          <span>ESTADO: <b className="uppercase text-slate-700">{billState || 'Nuevo'}</b></span>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-8 space-y-7">
-          <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
-            <div className="md:col-span-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">Fecha de Liquidación</label>
-              <input type="text" value={getFechaLiquidacion()} readOnly className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-500 outline-none cursor-not-allowed" />
+              <input type="text" value={getFechaFormateada()} readOnly className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-500 outline-none" />
             </div>
-            <div className="md:col-span-6">
-              <Select
-                label="Tipo de Siniestro *"
-                value={data.tipo_siniestro}
-                onChange={(e) => setData({ ...data, tipo_siniestro: e.target.value })}
-                disabled={!canEdit}
-                options={CLAIM_TYPES.map(type => ({ value: type, label: type }))}
-              />
-            </div>
+            <Select
+              label="Tipo de Siniestro *"
+              value={data.tipo_siniestro}
+              onChange={(e) => setData({ ...data, tipo_siniestro: e.target.value })}
+              disabled={!canEdit}
+              options={CLAIM_TYPES.map(t => ({ value: t, label: t }))}
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">Monto Facturado *</label>
-              <input type="text" value={formatNumber(montoFactNum)} readOnly className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-lg text-slate-600 font-bold cursor-not-allowed" />
+              <input type="text" value={formatNumber(montoFactNum)} readOnly className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-lg font-bold text-slate-600" />
             </div>
-
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">Monto AMP (Auto)</label>
               <input
@@ -159,7 +155,6 @@ export default function LiquidationSection({
                 className={`w-full px-4 py-2.5 border rounded-lg font-bold transition-colors ${montosCoinciden ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}
               />
             </div>
-
             <Input
               label="GNA"
               type="number"
@@ -191,7 +186,7 @@ export default function LiquidationSection({
               disabled={!canEdit}
             />
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Ret. 5% (Auto)</label>
+              <label className="block text-sm font-bold text-slate-700 mb-1">Ret. 5% (Solo Vista)</label>
               <input type="text" value={formatNumber(ret5Calculada)} readOnly className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-500" />
             </div>
           </div>
@@ -202,7 +197,7 @@ export default function LiquidationSection({
               <input
                 type="text"
                 value={montoIndemnizPositivo && montosCoinciden ? formatNumber(montoIndemniz) : ""}
-                placeholder={!montosCoinciden ? "Diferencia en montos" : "Cálculo pendiente..."}
+                placeholder={!montosCoinciden ? "No hay coincidencia" : "Calculando..."}
                 readOnly
                 className={`w-full px-4 py-2.5 border rounded-lg font-bold ${montoIndemnizPositivo && montosCoinciden ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-400'}`}
               />
@@ -215,11 +210,9 @@ export default function LiquidationSection({
             />
           </div>
 
-          <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 flex justify-between items-center">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase">Analista Liquidador</label>
-              <span className="text-sm font-bold text-slate-700">{getAnalystName()}</span>
-            </div>
+          <div className="pt-4 border-t border-slate-100 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Analista: {getAnalystDisplay()}</span>
           </div>
         </div>
 
@@ -227,7 +220,7 @@ export default function LiquidationSection({
           <Button 
             type="submit" 
             disabled={loading || !canEdit || !isFormValid()}
-            className={`min-w-[220px] py-3 rounded-lg font-bold transition-all ${(!isFormValid() || !canEdit) ? 'bg-slate-100 text-slate-400 border border-slate-200' : 'bg-[#1a56ff] hover:bg-[#0044ff] text-white'}`}
+            className={`min-w-[220px] py-3 rounded-lg font-bold transition-all ${(!isFormValid() || !canEdit) ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed' : 'bg-[#1a56ff] hover:bg-[#0044ff] text-white'}`}
           >
             {!montosCoinciden ? 'DIFERENCIA EN MONTOS' : 'Guardar Liquidación'}
           </Button>
