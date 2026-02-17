@@ -241,13 +241,11 @@ export default function BillsDetailsPage({
     if (billId && billId !== 'create-bill') loadBillData(billId);
   }, [billId]);
 
-  // --- FUNCIÓN DE GUARDADO CORREGIDA ---
   const handleSaveSection = async (section: string, sectionData: any) => {
     try {
       setLoading(true);
       const isCreating = !billId || billId === 'create-bill';
 
-      // Validar si la sección anterior está lista (excepto en creación)
       if (!isCreating && section !== 'recepcion') {
         const validation = isPreviousSectionCompleted(section);
         if (!validation.valid) {
@@ -309,7 +307,6 @@ export default function BillsDetailsPage({
       } else if (!isCreating && billId) {
         let updatePayload = {};
 
-        // --- MAPEO DE LIQUIDACIÓN CORREGIDO ---
         if (section === 'liquidacion') {
           updatePayload = {
             severance_date: new Date().toISOString(),
@@ -318,6 +315,7 @@ export default function BillsDetailsPage({
             gna: parseFloat(sectionData.gna) || 0,
             medical_honoraries: parseFloat(sectionData.honorarios_medic) || 0,
             clinical_services: parseFloat(sectionData.servicios_clinicos) || 0,
+            // NO INCLUIR retention_rate AQUÍ
             indemnizable_rate: parseFloat(sectionData.monto_indemniz) || 0,
             nomenclature_pile: sectionData.nomenclature_pile || null,
             analyst_severance: currentUserId,
@@ -402,27 +400,100 @@ export default function BillsDetailsPage({
         )}
 
         {activeSection === 'recepcion' && (
-          <ReceptionSection data={recepcionData} setData={setRecepcionData} providers={providers} allUsers={allUsers} onSave={(data: any) => handleSaveSection('recepcion', data)} isNewBill={!billExists} loading={loading} canEdit={canEditSection('recepcion')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
+          <ReceptionSection 
+            data={recepcionData} 
+            setData={setRecepcionData} 
+            providers={providers} 
+            allUsers={allUsers} 
+            onSave={(data: any) => handleSaveSection('recepcion', data)} 
+            isNewBill={!billExists} 
+            loading={loading} 
+            canEdit={canEditSection('recepcion')} 
+            userRole={currentUserRole} 
+            billState={currentBill?.state} 
+            currentUserId={currentUserId} 
+            currentBill={currentBill} 
+          />
         )}
 
         {activeSection === 'liquidacion' && (
-          <LiquidationSection data={liquidacionData} setData={setLiquidacionData} onSave={(data: any) => handleSaveSection('liquidacion', data)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('liquidacion')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
+          <LiquidationSection 
+            data={liquidacionData} 
+            setData={setLiquidacionData} 
+            onSave={(data: any) => handleSaveSection('liquidacion', data)} 
+            billExists={billExists} 
+            loading={loading} 
+            allUsers={allUsers} 
+            canEdit={canEditSection('liquidacion')} 
+            userRole={currentUserRole} 
+            billState={currentBill?.state} 
+            currentUserId={currentUserId} 
+            currentBill={currentBill} 
+          />
         )}
 
         {activeSection === 'auditoria' && (
-          <AuditSection data={auditoriaData} setData={setAuditoriaData} onSave={(data: any) => handleSaveSection('auditoria', data)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('auditoria')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
+          <AuditSection 
+            data={auditoriaData} 
+            setData={setAuditoriaData} 
+            onSave={(data: any) => handleSaveSection('auditoria', data)} 
+            billExists={billExists} 
+            loading={loading} 
+            allUsers={allUsers} 
+            canEdit={canEditSection('auditoria')} 
+            userRole={currentUserRole} 
+            billState={currentBill?.state} 
+            currentUserId={currentUserId} 
+            currentBill={currentBill} 
+          />
         )}
 
         {activeSection === 'programacion' && (
-          <ScheduleSection data={programacionData} setData={setProgramacionData} onSave={(data: any) => handleSaveSection('programacion', data)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('programacion')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
+          <ScheduleSection 
+            data={programacionData} 
+            setData={setProgramacionData} 
+            onSave={(data: any) => handleSaveSection('programacion', data)} 
+            billExists={billExists} 
+            loading={loading} 
+            allUsers={allUsers} 
+            canEdit={canEditSection('programacion')} 
+            userRole={currentUserRole} 
+            billState={currentBill?.state} 
+            currentUserId={currentUserId} 
+            currentBill={currentBill} 
+          />
         )}
 
         {activeSection === 'ejecucion' && (
-          <PaymentSection data={ejecucionData} setData={setEjecucionData} onSave={(data: any) => handleSaveSection('ejecucion', data)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('ejecucion')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
+          <PaymentSection 
+            data={ejecucionData} 
+            setData={setEjecucionData} 
+            onSave={(data: any) => handleSaveSection('ejecucion', data)} 
+            billExists={billExists} 
+            loading={loading} 
+            allUsers={allUsers} 
+            canEdit={canEditSection('ejecucion')} 
+            userRole={currentUserRole} 
+            billState={currentBill?.state} 
+            currentUserId={currentUserId} 
+            currentBill={currentBill} 
+          />
         )}
 
         {activeSection === 'finiquito' && (
-          <FinishSection data={finiquitoData} setData={setFiniquitoData} onSave={(data: any) => handleSaveSection('finiquito', data)} billExists={billExists} loading={loading} allUsers={allUsers} canEdit={canEditSection('finiquito')} userRole={currentUserRole} billState={currentBill?.state} currentUserId={currentUserId} currentBill={currentBill} />
+          <FinishSection 
+            data={finiquitoData} 
+            setData={setFiniquitoData} 
+            onSave={(data: any) => handleSaveSection('finiquito', data)} 
+            billExists={billExists} 
+            loading={loading} 
+            allUsers={allUsers} 
+            canEdit={canEditSection('finiquito')} 
+            userRole={currentUserRole} 
+            billState={currentBill?.state} 
+            currentUserId={currentUserId} 
+            currentBill={currentBill} 
+          />
         )}
       </div>
     </DashboardLayout>
