@@ -4,17 +4,20 @@ import { PlusIcon } from './icons';
 import BillsTable from './BillsTable';
 import { useNavigate } from 'react-router';
 import { useGetAllBills } from '../hooks/useGetAllBills';
-import { useAuth } from '../hooks/useAuth'; // ✅ Importar useAuth
+import { useAuth } from '../hooks/useAuth';
 
 type FilterType = 'number' | 'provider' | 'lot';
 
 export default function BillingPage() {
   const navigate = useNavigate();
-  const { user } = useAuth(); // ✅ Obtener usuario actual
+  const { user } = useAuth();
   const { bills, loading, error, getProviderName, deleteBill } = useGetAllBills();
   
   const [searchTerm, setSearchTerm] = React.useState('');
   const [filterType, setFilterType] = React.useState<FilterType>('number');
+
+  // ✅ Verificar si el usuario es proveedor
+  const isProvider = user?.profile?.role === 'proveedor';
 
   const handleClearFilters = () => {
     setSearchTerm('');
@@ -40,7 +43,8 @@ export default function BillingPage() {
             className="bg-transparent text-sm font-medium px-3 outline-none border-r border-neutral-200 cursor-pointer text-neutral-600 h-9"
           >
             <option value="number">N° Factura</option>
-            <option value="provider">Proveedor</option>
+            {/* ✅ Solo mostrar opción "Proveedor" si NO es proveedor */}
+            {!isProvider && <option value="provider">Proveedor</option>}
             <option value="lot">Lote</option>
           </select>
 
@@ -57,8 +61,8 @@ export default function BillingPage() {
           )}
         </div>
 
-        {/* ✅ Solo mostrar botón "Nueva Factura" si NO es proveedor */}
-        {user?.profile?.role !== 'proveedor' && (
+        {/* Solo mostrar botón "Nueva Factura" si NO es proveedor */}
+        {!isProvider && (
           <Button icon={<PlusIcon className="size-5" />} onClick={() => navigate('create-bill')}>
             Nueva Factura
           </Button>
