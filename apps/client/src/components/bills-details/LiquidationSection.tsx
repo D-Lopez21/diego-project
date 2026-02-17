@@ -30,14 +30,15 @@ export default function LiquidationSection({
     setModalOpen(true);
   };
 
-  // ✅ CORREGIDO: handleFocus ahora actualiza el estado también
+  // ✅ CORREGIDO: handleFocus usando parseFloat para detectar 0 correctamente
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>, fieldName: string) => {
-    if (e.target.value === '0' || e.target.value === '0.00') {
+    const val = parseFloat(e.target.value);
+    if (val === 0 || isNaN(val)) {
       setData((prev: any) => ({ ...prev, [fieldName]: '' }));
     }
   };
 
-  // Handler para restaurar "0" si el campo queda vacío al perder el focus
+  // ✅ Restaurar "0" si el campo queda vacío al perder el focus
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>, fieldName: string) => {
     if (e.target.value === '') {
       setData((prev: any) => ({ ...prev, [fieldName]: '0' }));
@@ -54,11 +55,11 @@ export default function LiquidationSection({
     // Ret. 5% = Monto Facturado * 0.05
     const ret5 = montoFact * 0.05;
 
-    // ✅ Monto AMP = GNA + Honorarios Médicos + Servicios Clínicos (SIN Ret. 5%)
+    // Monto AMP = GNA + Honorarios Médicos + Servicios Clínicos
     const montoAmp = gna + honorarios + servicios;
 
-    // Monto Indemnizado = Monto AMP - Ret. 5%
-    const montoIndemniz = montoAmp - ret5;
+    // ✅ CORREGIDO: Monto Indemnizado nunca negativo
+    const montoIndemniz = montoAmp > 0 ? montoAmp - ret5 : 0;
 
     setData((prev: any) => ({
       ...prev,
@@ -197,7 +198,7 @@ export default function LiquidationSection({
                 disabled={isReadOnly}
               />
 
-              {/* ✅ Monto AMP - Calculado automáticamente */}
+              {/* Monto AMP - Calculado automáticamente */}
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">
                   Monto AMP
@@ -246,7 +247,7 @@ export default function LiquidationSection({
                 disabled={isReadOnly}
               />
 
-              {/* ✅ Ret. 5% - Calculado automáticamente */}
+              {/* Ret. 5% - Calculado automáticamente */}
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">
                   Ret. 5%
@@ -266,8 +267,7 @@ export default function LiquidationSection({
 
             {/* Fila 4: Monto Indemnizado (auto) y Lote */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-              {/* ✅ Monto Indemnizado - Calculado automáticamente */}
+              {/* Monto Indemnizado - Calculado automáticamente */}
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">
                   Monto Indemnizado
