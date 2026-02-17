@@ -49,14 +49,6 @@ export default function LiquidationSection({
 
   const montosCoinciden = Math.abs(montoAmp - montoFactNum) < 0.01;
 
-  // --- NOMBRES DE ANALISTAS ---
-  // Usamos useMemo para que se recalcule cuando allUsers termine de cargar
-  const receptorNombre = React.useMemo(() => {
-    if (!allUsers?.length || !currentBill?.analyst_receptor_id) return 'Cargando...';
-    const analyst = allUsers.find((u: any) => u.id === currentBill.analyst_receptor_id);
-    return analyst?.full_name || analyst?.name || 'Desconocido';
-  }, [allUsers, currentBill?.analyst_receptor_id]);
-
   const getLiquidadorName = React.useCallback(() => {
     const analystId = data.analyst_liquidador || currentBill?.analyst_severance;
     if (!analystId) return 'Pendiente';
@@ -77,9 +69,6 @@ export default function LiquidationSection({
         </span>
         <span>
           Estado Factura: <span className="text-blue-600">{billState || 'PENDIENTE'}</span>
-        </span>
-        <span>
-          Receptor Original: <span className="text-slate-800">{receptorNombre}</span>
         </span>
       </div>
 
