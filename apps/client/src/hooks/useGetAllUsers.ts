@@ -9,36 +9,36 @@ export function useGetAllUsers() {
   const [error, setError] = React.useState<string | null>(null);
 
   const fetchUsers = React.useCallback(async () => {
+    // 1. FORZAMOS EL LOADING CADA VEZ QUE SE LLAMA A LA FUNCIÓN
+    setLoading(true); 
     try {
       const { data, error: supabaseError } = await supabase
         .from('profile')
         .select('*')
         .neq('role', 'proveedor')
-        .eq('active', true) // 🔥 SOLO OBTENER USUARIOS ACTIVOS
+        .eq('active', true)
         .order('name', { ascending: true });
 
       if (supabaseError) throw supabaseError;
       setUsers(data || []);
+      setError(null);
     } catch (err: any) {
       console.error("Error en useGetAllUsers:", err.message);
       setError(err.message);
     } finally {
+      // 2. ASEGURAMOS QUE EL LOADING TERMINE SIEMPRE
       setLoading(false);
     }
   }, []);
 
-  // 🔥 CAMBIO PRINCIPAL: En lugar de borrado físico, hacer borrado lógico
   const deleteUser = async (id: string) => {
     try {
-      // Cambiamos de borrado físico a borrado lógico
       const { error: updateError } = await supabase
         .from('profile')
-        .update({ active: false }) // Marcar como inactivo
+        .update({ active: false })
         .eq('id', id);
       
       if (updateError) throw updateError;
-      
-      // Remover del estado local para que desaparezca de la UI
       setUsers((prev) => prev.filter((u) => u.id !== id));
       return true;
     } catch (err: any) {
@@ -55,7 +55,6 @@ export function useGetAllUsers() {
         .eq('id', id);
 
       if (updateError) throw updateError;
-
       setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...updates } : u)));
       return true;
     } catch (err: any) {
@@ -64,8 +63,17 @@ export function useGetAllUsers() {
     }
   };
 
+  // 3. MEJORAMOS EL EFFECT CON UNA VARIABLE DE CONTROL
   React.useEffect(() => {
-    fetchUsers();
+    let isMounted = true;
+
+    if (isMounted) {
+      fetchUsers();
+    }
+
+    return () => {
+      isMounted = false; // Evita fugas de memoria y errores al navegar
+    };
   }, [fetchUsers]);
 
   return { 
