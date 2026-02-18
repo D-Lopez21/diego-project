@@ -4,11 +4,9 @@ import { PlusIcon } from './icons';
 import UsersTable from './UsersTable';
 import UserRegistrationModal from './UserRegistrationModal';
 import { useGetAllUsers } from '../hooks/useGetAllUsers';
-import { useAuth } from '../hooks/useAuth'; // ✅ Hook para obtener isLoading y isActiveTab
 import type { Profile } from '../contexts/AuthContext';
 
 export default function UsersPage() {
-  const { isLoading: authLoading, isActiveTab } = useAuth();
   const { users, loading, error, deleteUser, updateUser, refetch } = useGetAllUsers();
   
   const [modalIsOpen, setModalIsOpen] = React.useState(false);
@@ -16,17 +14,6 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [filterType, setFilterType] = React.useState<'name' | 'role'>('name');
 
-  // ✅ Evitar cargar componentes si la sesión o la pestaña no están listas
-  if (authLoading || !isActiveTab) {
-    return (
-      <DashboardLayout title="Gestión de Usuarios" returnTo="/">
-        <div className="flex flex-col items-center justify-center h-64 space-y-4">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-neutral-500 animate-pulse text-sm">Sincronizando seguridad...</p>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   const handleEdit = (user: Profile) => {
     setUserToEdit(user);

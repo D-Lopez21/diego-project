@@ -5,14 +5,13 @@ import { useAuth } from './useAuth';
 import type { Profile } from '../contexts/AuthContext';
 
 export function useGetAllUsers() {
-  const { isActiveTab, user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [users, setUsers] = React.useState<Profile[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
   const fetchUsers = React.useCallback(async (signal: AbortSignal) => {
-    // 🛡️ Solo intentamos cargar si la sesión ya terminó de cargar
-    if (authLoading || !user || !isActiveTab) return;
+    if (authLoading || !user) return;
 
     try {
       setLoading(true);
@@ -22,7 +21,7 @@ export function useGetAllUsers() {
         .neq('role', 'proveedor')
         .eq('active', true)
         .order('name', { ascending: true })
-        .abortSignal(signal); // ✅ Corregido: signal es obligatorio aquí
+        .abortSignal(signal); // ✅ TypeScript ya no marcará error aquí
 
       if (err) throw err;
       setUsers(data || []);
@@ -31,7 +30,7 @@ export function useGetAllUsers() {
     } finally {
       setLoading(false);
     }
-  }, [authLoading, user, isActiveTab]);
+  }, [authLoading, user]);
 
   React.useEffect(() => {
     const controller = new AbortController();
@@ -46,7 +45,7 @@ export function useGetAllUsers() {
       setUsers(prev => prev.filter(u => u.id !== id));
       return true;
     } catch (err: any) {
-      alert(err.message);
+      alert("Error: " + err.message);
       return false;
     }
   };
@@ -58,10 +57,17 @@ export function useGetAllUsers() {
       setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
       return true;
     } catch (err: any) {
-      alert(err.message);
+      alert("Error: " + err.message);
       return false;
     }
   };
 
-  return { users, loading, error, deleteUser, updateUser, refetch: () => fetchUsers(new AbortController().signal) };
+  return { 
+    users, 
+    loading, 
+    error, 
+    deleteUser, 
+    updateUser, 
+    refetch: () => fetchUsers(new AbortController().signal) 
+  };
 }

@@ -21,19 +21,14 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   isAdmin: boolean;
-  isActiveTab: boolean; 
 }
 
 export const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
-
-const TAB_ID = `tab_${Date.now()}`;
-const ACTIVE_TAB_KEY = 'active_tab_id';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = React.useState<AuthUser | null>(null);
   const [session, setSession] = React.useState<Session | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [isActiveTab, setIsActiveTab] = React.useState(false);
 
   const fetchProfile = React.useCallback(async (currentUser: User): Promise<AuthUser> => {
     try {
@@ -45,22 +40,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   React.useEffect(() => {
     let isMounted = true;
 
-    // 1. Lógica simple de pestaña única
-    const currentActive = localStorage.getItem(ACTIVE_TAB_KEY);
-    if (!currentActive || currentActive === TAB_ID) {
-      localStorage.setItem(ACTIVE_TAB_KEY, TAB_ID);
-      setIsActiveTab(true);
-    }
-
-    // 2. Inicialización de Auth
-    const init = async () => {
+    const initialize = async () => {
       try {
         const { data: { session: s } } = await supabase.auth.getSession();
         if (isMounted) {
           setSession(s);
           if (s?.user) {
-            const u = await fetchProfile(s.user);
-            setUser(u);
+            const fullUser = await fetchProfile(s.user);
+            setUser(fullUser);
           }
         }
       } finally {
@@ -68,14 +55,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
 
-    init();
+    initialize();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
       if (!isMounted) return;
       setSession(s);
       if (s?.user) {
-        const u = await fetchProfile(s.user);
-        setUser(u);
+        const fullUser = await fetchProfile(s.user);
+        setUser(fullUser);
       } else {
         setUser(null);
       }
@@ -88,22 +75,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [fetchProfile]);
 
-  // Si no es la pestaña activa, mostramos el botón de rescate inmediatamente
-  if (!isActiveTab && !isLoading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-white p-4">
-        <button 
-          onClick={() => { localStorage.setItem(ACTIVE_TAB_KEY, TAB_ID); window.location.reload(); }}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg font-bold"
-        >
-          Usar esta pestaña (Desbloquear)
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, isActiveTab, isAdmin: user?.profile?.role === 'admin' }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      isLoading, 
+      isAdmin: user?.profile?.role === 'admin' 
+    }}>
       {children}
     </AuthContext.Provider>
   );
