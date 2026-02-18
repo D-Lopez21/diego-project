@@ -1,6 +1,6 @@
 import { Button, Input } from '../common';
 import Modal from './BillModal';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 
 export default function PaymentSection({
   data,
@@ -18,7 +18,7 @@ export default function PaymentSection({
   const [modalMessage, setModalMessage] = useState('');
   const [modalType, setModalType] = useState<'info' | 'error' | 'success' | 'warning'>('info');
 
-  // Registra qué campo editó el usuario por última vez
+  // Cuál campo editó el usuario por última vez
   const lastEdited = useRef<'monto_bs' | 'ref_en_dolares' | null>(null);
 
   const showModal = (message: string, type: 'info' | 'error' | 'success' | 'warning' = 'warning') => {
@@ -27,39 +27,47 @@ export default function PaymentSection({
     setModalOpen(true);
   };
 
-  // ✅ Un solo useEffect que decide qué calcular según qué campo editó el usuario
-  useEffect(() => {
+  // ✅ Cálculos en tiempo real sin useEffect — no hay bucles posibles
+  const montoBsNum = parseFloat(data.monto_bs) || 0;
+  const tcrNum = parseFloat(data.tcr) || 0;
+  
+  const handleMontoChange = (value: string) => {
+    lastEdited.current = 'monto_bs';
     const tcr = parseFloat(data.tcr) || 0;
-    if (tcr === 0) return;
+    const monto = parseFloat(value) || 0;
+    const ref = tcr > 0 ? (monto / tcr).toFixed(2) : data.ref_en_dolares;
+    setData((prev: any) => ({ ...prev, monto_bs: value, ref_en_dolares: ref }));
+  };
 
-    if (lastEdited.current === 'monto_bs') {
-      // Usuario editó Monto Bs → calcular Ref. en Dólares
-      const monto = parseFloat(data.monto_bs) || 0;
-      const resultado = (monto / tcr).toFixed(2);
-      if (data.ref_en_dolares !== resultado) {
-        setData((prev: any) => ({ ...prev, ref_en_dolares: resultado }));
-      }
-    } else if (lastEdited.current === 'ref_en_dolares') {
-      // Usuario editó Ref. en Dólares → calcular Monto Bs
+  const handleRefChange = (value: string) => {
+    lastEdited.current = 'ref_en_dolares';
+    const tcr = parseFloat(data.tcr) || 0;
+    const ref = parseFloat(value) || 0;
+    const monto = (ref * tcr).toFixed(2);
+    setData((prev: any) => ({ ...prev, ref_en_dolares: value, monto_bs: monto }));
+  };
+
+  const handleTcrChange = (value: string) => {
+    const tcr = parseFloat(value) || 0;
+    if (lastEdited.current === 'ref_en_dolares') {
       const ref = parseFloat(data.ref_en_dolares) || 0;
-      const resultado = (ref * tcr).toFixed(2);
-      if (data.monto_bs !== resultado) {
-        setData((prev: any) => ({ ...prev, monto_bs: resultado }));
-      }
+      const monto = (ref * tcr).toFixed(2);
+      setData((prev: any) => ({ ...prev, tcr: value, monto_bs: monto }));
+    } else {
+      const monto = parseFloat(data.monto_bs) || 0;
+      const ref = tcr > 0 ? (monto / tcr).toFixed(2) : data.ref_en_dolares;
+      setData((prev: any) => ({ ...prev, tcr: value, ref_en_dolares: ref }));
     }
-  }, [data.monto_bs, data.ref_en_dolares, data.tcr]);
+  };
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    if (e.target.value === '0') {
-      e.target.value = '';
-    }
+    if (e.target.value === '0') e.target.value = '';
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>, fieldName: string) => {
     if (e.target.value === '') {
-      setData({ ...data, [fieldName]: '0' });
+      setData((prev: any) => ({ ...prev, [fieldName]: '0' }));
     }
-    lastEdited.current = null;
   };
 
   if (!billExists) {
@@ -85,6 +93,14 @@ export default function PaymentSection({
     return new Date(fechaLimpia).toLocaleDateString('es-ES');
   };
 
+  // Preparamos el data con valores calculados para guardar
+  const getDataToSave = () => {
+    const tcr = parseFloat(data.tcr) || 0;
+    const monto = parseFloat(data.monto_bs) || 0;
+    const ref = tcr > 0 ? parseFloat((monto / tcr).toFixed(2)) : parseFloat(data.ref_en_dolares) || 0;
+    return { ...data, ref_en_dolares: String(ref) };
+  };
+
   return (
     <>
       <Modal
@@ -95,13 +111,8 @@ export default function PaymentSection({
       />
       <style>{`
         input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
-        }
-        input[type="number"] {
-          -moz-appearance: textfield;
-        }
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
       `}</style>
       <form
         onSubmit={(e) => {
@@ -110,7 +121,7 @@ export default function PaymentSection({
             showModal('No tienes permisos para guardar cambios en esta sección', 'warning');
             return;
           }
-          onSave(data);
+          onSave(getDataToSave());
         }}
         className="space-y-6"
       >
@@ -127,7 +138,6 @@ export default function PaymentSection({
 
         {/* Contenedor Principal */}
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          {/* Cabecera */}
           <div className="border-b border-slate-100 bg-white px-6 py-4">
             <h3 className="text-[13px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
               <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -138,7 +148,7 @@ export default function PaymentSection({
           </div>
 
           <div className="p-8 space-y-7">
-            {/* Fila 1: Fecha de Pago */}
+            {/* Fecha */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Fecha de Pago</label>
@@ -151,7 +161,7 @@ export default function PaymentSection({
               </div>
             </div>
 
-            {/* Fila 2: Montos principales */}
+            {/* Montos */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
               {/* Monto Bs */}
@@ -162,57 +172,53 @@ export default function PaymentSection({
                 <input
                   type="number"
                   value={data.monto_bs || '0'}
-                  onChange={(e) => {
-                    lastEdited.current = 'monto_bs';
-                    setData((prev: any) => ({ ...prev, monto_bs: e.target.value }));
-                  }}
+                  onChange={(e) => handleMontoChange(e.target.value)}
                   onFocus={handleFocus}
                   onBlur={(e) => handleBlur(e, 'monto_bs')}
                   disabled={isReadOnly}
                   className={`w-full px-4 py-2.5 border rounded-lg outline-none transition-all
-                    ${isReadOnly
-                      ? 'bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed'
-                      : 'bg-white border-slate-200 focus:ring-2 focus:ring-blue-500 text-slate-800'
-                    }`}
+                    ${isReadOnly ? 'bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed' : 'bg-white border-slate-200 focus:ring-2 focus:ring-blue-500 text-slate-800'}`}
                 />
               </div>
 
               {/* TCR */}
-              <Input
-                label="TCR"
-                type="number"
-                value={data.tcr || '0'}
-                onChange={(e) => setData({ ...data, tcr: e.target.value })}
-                onFocus={handleFocus}
-                onBlur={(e) => handleBlur(e, 'tcr')}
-                disabled={isReadOnly}
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">TCR</label>
+                <input
+                  type="number"
+                  value={data.tcr || '0'}
+                  onChange={(e) => handleTcrChange(e.target.value)}
+                  onFocus={handleFocus}
+                  onBlur={(e) => handleBlur(e, 'tcr')}
+                  disabled={isReadOnly}
+                  className={`w-full px-4 py-2.5 border rounded-lg outline-none transition-all
+                    ${isReadOnly ? 'bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed' : 'bg-white border-slate-200 focus:ring-2 focus:ring-blue-500 text-slate-800'}`}
+                />
+              </div>
 
-              {/* Ref. en Dólares */}
+              {/* Ref. en Dólares — siempre muestra el valor calculado */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Ref. en Dólares <span className="text-xs text-slate-400 font-normal">(Monto Bs ÷ TCR)</span>
                 </label>
                 <input
                   type="number"
-                  value={data.ref_en_dolares || '0'}
-                  onChange={(e) => {
-                    lastEdited.current = 'ref_en_dolares';
-                    setData((prev: any) => ({ ...prev, ref_en_dolares: e.target.value }));
-                  }}
+                  value={
+                    tcrNum > 0
+                      ? (montoBsNum / tcrNum).toFixed(2)
+                      : data.ref_en_dolares || '0'
+                  }
+                  onChange={(e) => handleRefChange(e.target.value)}
                   onFocus={handleFocus}
                   onBlur={(e) => handleBlur(e, 'ref_en_dolares')}
                   disabled={isReadOnly}
                   className={`w-full px-4 py-2.5 border rounded-lg outline-none transition-all
-                    ${isReadOnly
-                      ? 'bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed'
-                      : 'bg-white border-slate-200 focus:ring-2 focus:ring-blue-500 text-slate-800'
-                    }`}
+                    ${isReadOnly ? 'bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed' : 'bg-white border-slate-200 focus:ring-2 focus:ring-blue-500 text-slate-800'}`}
                 />
               </div>
             </div>
 
-            {/* Fila 3: Referencias y Diferencias */}
+            {/* Referencias y Diferencias */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Input
                 label="Referencia Bancaria"
@@ -220,7 +226,6 @@ export default function PaymentSection({
                 onChange={(e) => setData({ ...data, ref_bancaria: e.target.value })}
                 disabled={isReadOnly}
               />
-
               <Input
                 label="Diferencia Vértice"
                 type="number"
@@ -230,7 +235,6 @@ export default function PaymentSection({
                 onBlur={(e) => handleBlur(e, 'diferencia_vertice')}
                 disabled={isReadOnly}
               />
-
               <Input
                 label="Diferencia Proveedor"
                 type="number"
@@ -242,7 +246,7 @@ export default function PaymentSection({
               />
             </div>
 
-            {/* Sección de Analista */}
+            {/* Analista */}
             <div className="bg-slate-50 border border-slate-100 rounded-lg p-5 flex justify-between items-center">
               <div>
                 <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-tight mb-1">
@@ -250,9 +254,7 @@ export default function PaymentSection({
                 </label>
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-                  <span className="text-sm font-bold text-slate-700">
-                    {getPagadorName()}
-                  </span>
+                  <span className="text-sm font-bold text-slate-700">{getPagadorName()}</span>
                 </div>
               </div>
               <p className="text-[11px] text-slate-400 italic text-right leading-tight max-w-[180px]">
@@ -262,7 +264,7 @@ export default function PaymentSection({
           </div>
         </div>
 
-        {/* Botón de Acción */}
+        {/* Botón */}
         <div className="flex justify-end pt-2">
           <Button
             type="submit"
