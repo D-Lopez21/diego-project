@@ -47,12 +47,12 @@ export default function LiquidationSection({
     }
   }, [montoAmp, montoIndemniz]);
 
+  // ✅ Se mantiene solo como referencia visual, ya no bloquea el guardado
   const montosCoinciden = Math.abs(montoAmp - montoFactNum) < 0.01;
 
   const getLiquidadorName = React.useCallback(() => {
     const analystId = data.analyst_liquidador || currentBill?.analyst_severance;
     if (!analystId) return 'Pendiente';
-    // Si allUsers aún no cargó, mostramos estado de carga en vez de "Desconocido"
     if (!allUsers?.length) return 'Cargando...';
     const analyst = allUsers.find((u: any) => u.id === analystId);
     return analyst?.full_name || analyst?.name || 'Desconocido';
@@ -117,7 +117,7 @@ export default function LiquidationSection({
               readOnly
             />
 
-            {/* Monto AMP con indicador de color */}
+            {/* Monto AMP — solo indicador visual, ya no bloquea */}
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Monto AMP (Auto)
@@ -126,7 +126,7 @@ export default function LiquidationSection({
                 className={`w-full px-4 py-2.5 rounded-lg border font-bold transition-all
                   ${montosCoinciden
                     ? 'bg-green-50 border-green-200 text-green-700'
-                    : 'bg-red-50 border-red-200 text-red-700'
+                    : 'bg-yellow-50 border-yellow-200 text-yellow-700'
                   }`}
               >
                 {montoAmp.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
@@ -226,11 +226,11 @@ export default function LiquidationSection({
         </div>
       </div>
 
-      {/* BOTÓN DE GUARDAR */}
+      {/* BOTÓN DE GUARDAR — ✅ se eliminó !montosCoinciden de disabled */}
       <div className="flex justify-end pt-2">
         <Button
           onClick={() => onSave(data)}
-          disabled={loading || !canEdit || !montosCoinciden || !data.tipo_siniestro}
+          disabled={loading || !canEdit || !data.tipo_siniestro}
           className="min-w-[200px] py-2.5 rounded-lg shadow-sm font-bold transition-all active:scale-95 hover:shadow-md"
         >
           {loading ? 'Guardando...' : 'Guardar Liquidación'}
