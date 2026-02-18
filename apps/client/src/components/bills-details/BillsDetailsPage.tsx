@@ -256,7 +256,7 @@ export default function BillsDetailsPage({
       }
 
       if (section === 'recepcion') {
-        const amount = parseFloat(sectionData.total_billing);
+        const amount = parseFloat(sectionData?.total_billing);
         if (isNaN(amount) || amount <= 0) {
           showModal('El monto debe ser mayor a 0.', 'error');
           setLoading(false);
@@ -267,18 +267,18 @@ export default function BillsDetailsPage({
           const { data: newBill, error } = await supabase
             .from('bills')
             .insert([{
-                arrival_date: sectionData.arrival_date || new Date().toISOString(),
-                suppliers_id: sectionData.suppliers_id || null,
-                n_claim: sectionData.n_claim || '',
-                type: sectionData.type === 'DNF' ? 'DNF' : 'FACTURA',
-                n_billing: sectionData.n_billing || '',
-                n_control: sectionData.n_control || '',
-                currency_type: sectionData.currency_type === 'USD' ? 'USD' : 'VES',
-                total_billing: amount,
-                analyst_receptor_id: currentUserId,
-                state: 'recibida',
-                state_sequence: 'recepcion',
-                active: true,
+              arrival_date: sectionData?.arrival_date || new Date().toISOString(),
+              suppliers_id: sectionData?.suppliers_id || null,
+              n_claim: sectionData?.n_claim || '',
+              type: sectionData?.type === 'DNF' ? 'DNF' : 'FACTURA',
+              n_billing: sectionData?.n_billing || '',
+              n_control: sectionData?.n_control || '',
+              currency_type: sectionData?.currency_type === 'USD' ? 'USD' : 'VES',
+              total_billing: amount,
+              analyst_receptor_id: currentUserId,
+              state: 'recibida',
+              state_sequence: 'recepcion',
+              active: true,
             }])
             .select().single();
           if (error) throw error;
@@ -288,16 +288,16 @@ export default function BillsDetailsPage({
           const { error } = await supabase
             .from('bills')
             .update({
-                arrival_date: sectionData.arrival_date,
-                suppliers_id: sectionData.suppliers_id,
-                n_claim: sectionData.n_claim,
-                type: sectionData.type === 'DNF' ? 'DNF' : 'FACTURA',
-                n_billing: sectionData.n_billing,
-                n_control: sectionData.n_control,
-                currency_type: sectionData.currency_type,
-                total_billing: amount,
-                analyst_receptor_id: currentUserId,
-                updated_at: new Date().toISOString(),
+              arrival_date: sectionData?.arrival_date,
+              suppliers_id: sectionData?.suppliers_id,
+              n_claim: sectionData?.n_claim,
+              type: sectionData?.type === 'DNF' ? 'DNF' : 'FACTURA',
+              n_billing: sectionData?.n_billing,
+              n_control: sectionData?.n_control,
+              currency_type: sectionData?.currency_type,
+              total_billing: amount,
+              analyst_receptor_id: currentUserId,
+              updated_at: new Date().toISOString(),
             })
             .eq('id', billId);
           if (error) throw error;
@@ -310,14 +310,13 @@ export default function BillsDetailsPage({
         if (section === 'liquidacion') {
           updatePayload = {
             severance_date: new Date().toISOString(),
-            claim_type: sectionData.tipo_siniestro || null,
-            monto_amp: parseFloat(sectionData.monto_amp) || 0,
-            gna: parseFloat(sectionData.gna) || 0,
-            medical_honoraries: parseFloat(sectionData.honorarios_medic) || 0,
-            clinical_services: parseFloat(sectionData.servicios_clinicos) || 0,
-            // NO INCLUIR retention_rate AQUÍ
-            indemnizable_rate: parseFloat(sectionData.monto_indemniz) || 0,
-            nomenclature_pile: sectionData.nomenclature_pile || null,
+            claim_type: sectionData?.tipo_siniestro || null,
+            monto_amp: parseFloat(sectionData?.monto_amp) || 0,
+            gna: parseFloat(sectionData?.gna) || 0,
+            medical_honoraries: parseFloat(sectionData?.honorarios_medic) || 0,
+            clinical_services: parseFloat(sectionData?.servicios_clinicos) || 0,
+            indemnizable_rate: parseFloat(sectionData?.monto_indemniz) || 0,
+            nomenclature_pile: sectionData?.nomenclature_pile || null,
             analyst_severance: currentUserId,
             state: 'pendiente',
             state_sequence: 'liquidacion',
@@ -330,10 +329,11 @@ export default function BillsDetailsPage({
             state_sequence: 'auditoria',
           };
         } else if (section === 'programacion') {
-          const newState = sectionData.decision_adm === 'DEVUELTO' ? 'devuelto' : 'programado';
+          // ✅ FIX: uso de optional chaining para evitar crash si sectionData es undefined
+          const newState = sectionData?.decision_adm === 'DEVUELTO' ? 'devuelto' : 'programado';
           updatePayload = {
             programmed_date: new Date().toISOString(),
-            admin_decision: sectionData.decision_adm || null,
+            admin_decision: sectionData?.decision_adm || null,
             analyst_schedule: currentUserId,
             state: newState,
             state_sequence: 'programacion',
@@ -341,12 +341,12 @@ export default function BillsDetailsPage({
         } else if (section === 'ejecucion') {
           updatePayload = {
             paid_date: new Date().toISOString(),
-            bs_amount: parseFloat(sectionData.monto_bs) || 0,
-            tcr_amount: parseFloat(sectionData.tcr) || 0,
-            dollar_amount: parseFloat(sectionData.ref_en_dolares) || 0,
-            transfer_ref: sectionData.ref_bancaria || null,
-            vertice_difference: parseFloat(sectionData.diferencia_vertice) || 0,
-            provider_difference: parseFloat(sectionData.diferencia_proveedor) || 0,
+            bs_amount: parseFloat(sectionData?.monto_bs) || 0,
+            tcr_amount: parseFloat(sectionData?.tcr) || 0,
+            dollar_amount: parseFloat(sectionData?.ref_en_dolares) || 0,
+            transfer_ref: sectionData?.ref_bancaria || null,
+            vertice_difference: parseFloat(sectionData?.diferencia_vertice) || 0,
+            provider_difference: parseFloat(sectionData?.diferencia_proveedor) || 0,
             analyst_paid: currentUserId,
             state: 'pagado',
             state_sequence: 'pagos',
@@ -400,99 +400,99 @@ export default function BillsDetailsPage({
         )}
 
         {activeSection === 'recepcion' && (
-          <ReceptionSection 
-            data={recepcionData} 
-            setData={setRecepcionData} 
-            providers={providers} 
-            allUsers={allUsers} 
-            onSave={(data: any) => handleSaveSection('recepcion', data)} 
-            isNewBill={!billExists} 
-            loading={loading} 
-            canEdit={canEditSection('recepcion')} 
-            userRole={currentUserRole} 
-            billState={currentBill?.state} 
-            currentUserId={currentUserId} 
-            currentBill={currentBill} 
+          <ReceptionSection
+            data={recepcionData}
+            setData={setRecepcionData}
+            providers={providers}
+            allUsers={allUsers}
+            onSave={(sectionData: any) => handleSaveSection('recepcion', sectionData)}
+            isNewBill={!billExists}
+            loading={loading}
+            canEdit={canEditSection('recepcion')}
+            userRole={currentUserRole}
+            billState={currentBill?.state}
+            currentUserId={currentUserId}
+            currentBill={currentBill}
           />
         )}
 
         {activeSection === 'liquidacion' && (
-          <LiquidationSection 
-            data={liquidacionData} 
-            setData={setLiquidacionData} 
-            onSave={(data: any) => handleSaveSection('liquidacion', data)} 
-            billExists={billExists} 
-            loading={loading} 
-            allUsers={allUsers} 
-            canEdit={canEditSection('liquidacion')} 
-            userRole={currentUserRole} 
-            billState={currentBill?.state} 
-            currentUserId={currentUserId} 
-            currentBill={currentBill} 
+          <LiquidationSection
+            data={liquidacionData}
+            setData={setLiquidacionData}
+            onSave={(sectionData: any) => handleSaveSection('liquidacion', sectionData)}
+            billExists={billExists}
+            loading={loading}
+            allUsers={allUsers}
+            canEdit={canEditSection('liquidacion')}
+            userRole={currentUserRole}
+            billState={currentBill?.state}
+            currentUserId={currentUserId}
+            currentBill={currentBill}
           />
         )}
 
         {activeSection === 'auditoria' && (
-          <AuditSection 
-            data={auditoriaData} 
-            setData={setAuditoriaData} 
-            onSave={(data: any) => handleSaveSection('auditoria', data)} 
-            billExists={billExists} 
-            loading={loading} 
-            allUsers={allUsers} 
-            canEdit={canEditSection('auditoria')} 
-            userRole={currentUserRole} 
-            billState={currentBill?.state} 
-            currentUserId={currentUserId} 
-            currentBill={currentBill} 
+          <AuditSection
+            data={auditoriaData}
+            setData={setAuditoriaData}
+            onSave={(sectionData: any) => handleSaveSection('auditoria', sectionData)}
+            billExists={billExists}
+            loading={loading}
+            allUsers={allUsers}
+            canEdit={canEditSection('auditoria')}
+            userRole={currentUserRole}
+            billState={currentBill?.state}
+            currentUserId={currentUserId}
+            currentBill={currentBill}
           />
         )}
 
         {activeSection === 'programacion' && (
-          <ScheduleSection 
-            data={programacionData} 
-            setData={setProgramacionData} 
-            onSave={(data: any) => handleSaveSection('programacion', data)} 
-            billExists={billExists} 
-            loading={loading} 
-            allUsers={allUsers} 
-            canEdit={canEditSection('programacion')} 
-            userRole={currentUserRole} 
-            billState={currentBill?.state} 
-            currentUserId={currentUserId} 
-            currentBill={currentBill} 
+          <ScheduleSection
+            data={programacionData}
+            setData={setProgramacionData}
+            onSave={(sectionData: any) => handleSaveSection('programacion', sectionData)}
+            billExists={billExists}
+            loading={loading}
+            allUsers={allUsers}
+            canEdit={canEditSection('programacion')}
+            userRole={currentUserRole}
+            billState={currentBill?.state}
+            currentUserId={currentUserId}
+            currentBill={currentBill}
           />
         )}
 
         {activeSection === 'ejecucion' && (
-          <PaymentSection 
-            data={ejecucionData} 
-            setData={setEjecucionData} 
-            onSave={(data: any) => handleSaveSection('ejecucion', data)} 
-            billExists={billExists} 
-            loading={loading} 
-            allUsers={allUsers} 
-            canEdit={canEditSection('ejecucion')} 
-            userRole={currentUserRole} 
-            billState={currentBill?.state} 
-            currentUserId={currentUserId} 
-            currentBill={currentBill} 
+          <PaymentSection
+            data={ejecucionData}
+            setData={setEjecucionData}
+            onSave={(sectionData: any) => handleSaveSection('ejecucion', sectionData)}
+            billExists={billExists}
+            loading={loading}
+            allUsers={allUsers}
+            canEdit={canEditSection('ejecucion')}
+            userRole={currentUserRole}
+            billState={currentBill?.state}
+            currentUserId={currentUserId}
+            currentBill={currentBill}
           />
         )}
 
         {activeSection === 'finiquito' && (
-          <FinishSection 
-            data={finiquitoData} 
-            setData={setFiniquitoData} 
-            onSave={(data: any) => handleSaveSection('finiquito', data)} 
-            billExists={billExists} 
-            loading={loading} 
-            allUsers={allUsers} 
-            canEdit={canEditSection('finiquito')} 
-            userRole={currentUserRole} 
-            billState={currentBill?.state} 
-            currentUserId={currentUserId} 
-            currentBill={currentBill} 
+          <FinishSection
+            data={finiquitoData}
+            setData={setFiniquitoData}
+            onSave={(sectionData: any) => handleSaveSection('finiquito', sectionData)}
+            billExists={billExists}
+            loading={loading}
+            allUsers={allUsers}
+            canEdit={canEditSection('finiquito')}
+            userRole={currentUserRole}
+            billState={currentBill?.state}
+            currentUserId={currentUserId}
+            currentBill={currentBill}
           />
         )}
       </div>
