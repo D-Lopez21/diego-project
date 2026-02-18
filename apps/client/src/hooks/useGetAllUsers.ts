@@ -1,66 +1,72 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { supabase } from '../lib/supabase';
-import { useAuth } from './useAuth';
 import type { Profile } from '../contexts/AuthContext';
 
 export function useGetAllUsers() {
-  const { user, isLoading: authLoading } = useAuth();
   const [users, setUsers] = React.useState<Profile[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const fetchUsers = React.useCallback(async (signal: AbortSignal) => {
-    if (authLoading || !user) return;
-
+  const fetchUsers = React.useCallback(async () => {
     try {
-      setLoading(true);
-      const { data, error: err } = await supabase
+      const { data, error: supabaseError } = await supabase
         .from('profile')
         .select('*')
         .neq('role', 'proveedor')
-        .eq('active', true)
-        .order('name', { ascending: true })
-        .abortSignal(signal); // ✅ TypeScript ya no marcará error aquí
+        .eq('active', true) // 🔥 SOLO OBTENER USUARIOS ACTIVOS
+        .order('name', { ascending: true });
 
-      if (err) throw err;
+      if (supabaseError) throw supabaseError;
       setUsers(data || []);
     } catch (err: any) {
-      if (err.name !== 'AbortError') setError(err.message);
+      console.error("Error en useGetAllUsers:", err.message);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [authLoading, user]);
+  }, []);
 
-  React.useEffect(() => {
-    const controller = new AbortController();
-    fetchUsers(controller.signal);
-    return () => controller.abort();
-  }, [fetchUsers]);
-
+  // 🔥 CAMBIO PRINCIPAL: En lugar de borrado físico, hacer borrado lógico
   const deleteUser = async (id: string) => {
     try {
-      const { error: err } = await supabase.from('profile').update({ active: false }).eq('id', id);
-      if (err) throw err;
-      setUsers(prev => prev.filter(u => u.id !== id));
+      // Cambiamos de borrado físico a borrado lógico
+      const { error: updateError } = await supabase
+        .from('profile')
+        .update({ active: false }) // Marcar como inactivo
+        .eq('id', id);
+      
+      if (updateError) throw updateError;
+      
+      // Remover del estado local para que desaparezca de la UI
+      setUsers((prev) => prev.filter((u) => u.id !== id));
       return true;
     } catch (err: any) {
-      alert("Error: " + err.message);
+      alert('Error al desactivar usuario: ' + err.message);
       return false;
     }
   };
 
   const updateUser = async (id: string, updates: Partial<Profile>) => {
     try {
-      const { error: err } = await supabase.from('profile').update(updates).eq('id', id);
-      if (err) throw err;
-      setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+      const { error: updateError } = await supabase
+        .from('profile')
+        .update(updates)
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...updates } : u)));
       return true;
     } catch (err: any) {
-      alert("Error: " + err.message);
+      alert('Error al actualizar usuario: ' + err.message);
       return false;
     }
   };
+
+  React.useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   return { 
     users, 
@@ -68,6 +74,6 @@ export function useGetAllUsers() {
     error, 
     deleteUser, 
     updateUser, 
-    refetch: () => fetchUsers(new AbortController().signal) 
+    refetch: fetchUsers 
   };
 }
