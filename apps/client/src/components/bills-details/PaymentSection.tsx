@@ -1,6 +1,6 @@
 import { Button, Input } from '../common';
 import Modal from './BillModal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function PaymentSection({
   data,
@@ -24,14 +24,22 @@ export default function PaymentSection({
     setModalOpen(true);
   };
 
-  // Handler para limpiar el campo cuando tiene valor "0" y se hace focus
+  // ✅ Calcula Ref. en Dólares automáticamente cuando cambian Monto Bs o TCR
+  useEffect(() => {
+    const monto = parseFloat(data.monto_bs) || 0;
+    const tcr = parseFloat(data.tcr) || 0;
+    const resultado = tcr > 0 ? (monto / tcr).toFixed(2) : '0';
+    if (data.ref_en_dolares !== resultado) {
+      setData((prev: any) => ({ ...prev, ref_en_dolares: resultado }));
+    }
+  }, [data.monto_bs, data.tcr]);
+
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     if (e.target.value === '0') {
       e.target.value = '';
     }
   };
 
-  // Handler para restaurar "0" si el campo queda vacío al perder el focus
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>, fieldName: string) => {
     if (e.target.value === '') {
       setData({ ...data, [fieldName]: '0' });
@@ -63,14 +71,13 @@ export default function PaymentSection({
 
   return (
     <>
-      <Modal 
+      <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         message={modalMessage}
         type={modalType}
       />
       <style>{`
-        /* Ocultar flechas de input type="number" */
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button {
           -webkit-appearance: none;
@@ -87,7 +94,7 @@ export default function PaymentSection({
             showModal('No tienes permisos para guardar cambios en esta sección', 'warning');
             return;
           }
-          onSave();
+          onSave(data);
         }}
         className="space-y-6"
       >
@@ -150,15 +157,17 @@ export default function PaymentSection({
                 disabled={isReadOnly}
               />
 
-              <Input
-                label="Ref. en Dólares"
-                type="number"
-                value={data.ref_en_dolares || '0'}
-                onChange={(e) => setData({ ...data, ref_en_dolares: e.target.value })}
-                onFocus={handleFocus}
-                onBlur={(e) => handleBlur(e, 'ref_en_dolares')}
-                disabled={isReadOnly}
-              />
+              {/* ✅ Ref. en Dólares — calculado automáticamente, solo lectura */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ref. en Dólares <span className="text-xs text-slate-400 font-normal">(Monto Bs ÷ TCR)</span>
+                </label>
+                <div className="w-full px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 font-bold">
+                  {parseFloat(data.ref_en_dolares) > 0
+                    ? parseFloat(data.ref_en_dolares).toLocaleString('es-VE', { minimumFractionDigits: 2 })
+                    : '0,00'}
+                </div>
+              </div>
             </div>
 
             {/* Fila 3: Referencias y Diferencias */}
@@ -213,15 +222,17 @@ export default function PaymentSection({
 
         {/* Botón de Acción */}
         <div className="flex justify-end pt-2">
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={loading || isReadOnly}
             className={`min-w-[220px] py-3 rounded-lg shadow-sm font-bold transition-all
               ${isReadOnly ? 'bg-slate-100 text-slate-400 border border-slate-200' : 'bg-[#1a56ff] hover:bg-[#0044ff] text-white'}`}
           >
             {isReadOnly ? (
               <span className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
                 MODO LECTURA
               </span>
             ) : 'Guardar Ejecución'}
