@@ -1,6 +1,6 @@
 import { Button, Input } from '../common';
 import Modal from './BillModal';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function PaymentSection({
   data,
@@ -18,14 +18,18 @@ export default function PaymentSection({
   const [modalMessage, setModalMessage] = useState('');
   const [modalType, setModalType] = useState<'info' | 'error' | 'success' | 'warning'>('info');
 
+  // Controla qué campo fue editado por el usuario para no entrar en bucle
+  const lastEdited = useRef<'monto_bs' | 'ref_en_dolares' | null>(null);
+
   const showModal = (message: string, type: 'info' | 'error' | 'success' | 'warning' = 'warning') => {
     setModalMessage(message);
     setModalType(type);
     setModalOpen(true);
   };
 
-  // ✅ Calcula Ref. en Dólares automáticamente cuando cambian Monto Bs o TCR
+  // ✅ Si el usuario edita Monto Bs o TCR → calcula Ref. en Dólares
   useEffect(() => {
+    if (lastEdited.current === 'ref_en_dolares') return;
     const monto = parseFloat(data.monto_bs) || 0;
     const tcr = parseFloat(data.tcr) || 0;
     const resultado = tcr > 0 ? (monto / tcr).toFixed(2) : '0';
@@ -33,6 +37,17 @@ export default function PaymentSection({
       setData((prev: any) => ({ ...prev, ref_en_dolares: resultado }));
     }
   }, [data.monto_bs, data.tcr]);
+
+  // ✅ Si el usuario edita Ref. en Dólares o TCR → calcula Monto Bs
+  useEffect(() => {
+    if (lastEdited.current === 'monto_bs') return;
+    const ref = parseFloat(data.ref_en_dolares) || 0;
+    const tcr = parseFloat(data.tcr) || 0;
+    const resultado = (ref * tcr).toFixed(2);
+    if (data.monto_bs !== resultado) {
+      setData((prev: any) => ({ ...prev, monto_bs: resultado }));
+    }
+  }, [data.ref_en_dolares, data.tcr]);
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     if (e.target.value === '0') {
@@ -44,6 +59,7 @@ export default function PaymentSection({
     if (e.target.value === '') {
       setData({ ...data, [fieldName]: '0' });
     }
+    lastEdited.current = null;
   };
 
   if (!billExists) {
@@ -137,15 +153,29 @@ export default function PaymentSection({
 
             {/* Fila 2: Montos principales */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Input
-                label="Monto Bs"
-                type="number"
-                value={data.monto_bs || '0'}
-                onChange={(e) => setData({ ...data, monto_bs: e.target.value })}
-                onFocus={handleFocus}
-                onBlur={(e) => handleBlur(e, 'monto_bs')}
-                disabled={isReadOnly}
-              />
+
+              {/* ✅ Monto Bs — editable, también se recalcula si el usuario toca Ref. en Dólares */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Monto Bs <span className="text-xs text-slate-400 font-normal">(Ref. $ × TCR)</span>
+                </label>
+                <input
+                  type="number"
+                  value={data.monto_bs || '0'}
+                  onChange={(e) => {
+                    lastEdited.current = 'monto_bs';
+                    setData({ ...data, monto_bs: e.target.value });
+                  }}
+                  onFocus={handleFocus}
+                  onBlur={(e) => handleBlur(e, 'monto_bs')}
+                  disabled={isReadOnly}
+                  className={`w-full px-4 py-2.5 border rounded-lg outline-none transition-all
+                    ${isReadOnly
+                      ? 'bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed'
+                      : 'bg-white border-slate-200 focus:ring-2 focus:ring-blue-500 text-slate-800'
+                    }`}
+                />
+              </div>
 
               <Input
                 label="TCR"
@@ -157,16 +187,27 @@ export default function PaymentSection({
                 disabled={isReadOnly}
               />
 
-              {/* ✅ Ref. en Dólares — calculado automáticamente, solo lectura */}
+              {/* ✅ Ref. en Dólares — editable, también se recalcula si el usuario toca Monto Bs */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Ref. en Dólares <span className="text-xs text-slate-400 font-normal">(Monto Bs ÷ TCR)</span>
                 </label>
-                <div className="w-full px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 font-bold">
-                  {parseFloat(data.ref_en_dolares) > 0
-                    ? parseFloat(data.ref_en_dolares).toLocaleString('es-VE', { minimumFractionDigits: 2 })
-                    : '0,00'}
-                </div>
+                <input
+                  type="number"
+                  value={data.ref_en_dolares || '0'}
+                  onChange={(e) => {
+                    lastEdited.current = 'ref_en_dolares';
+                    setData({ ...data, ref_en_dolares: e.target.value });
+                  }}
+                  onFocus={handleFocus}
+                  onBlur={(e) => handleBlur(e, 'ref_en_dolares')}
+                  disabled={isReadOnly}
+                  className={`w-full px-4 py-2.5 border rounded-lg outline-none transition-all
+                    ${isReadOnly
+                      ? 'bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed'
+                      : 'bg-white border-slate-200 focus:ring-2 focus:ring-blue-500 text-slate-800'
+                    }`}
+                />
               </div>
             </div>
 
