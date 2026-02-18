@@ -18,7 +18,7 @@ export default function PaymentSection({
   const [modalMessage, setModalMessage] = useState('');
   const [modalType, setModalType] = useState<'info' | 'error' | 'success' | 'warning'>('info');
 
-  // Controla qué campo fue editado por el usuario para no entrar en bucle
+  // Registra qué campo editó el usuario por última vez
   const lastEdited = useRef<'monto_bs' | 'ref_en_dolares' | null>(null);
 
   const showModal = (message: string, type: 'info' | 'error' | 'success' | 'warning' = 'warning') => {
@@ -27,27 +27,27 @@ export default function PaymentSection({
     setModalOpen(true);
   };
 
-  // ✅ Si el usuario edita Monto Bs o TCR → calcula Ref. en Dólares
+  // ✅ Un solo useEffect que decide qué calcular según qué campo editó el usuario
   useEffect(() => {
-    if (lastEdited.current === 'ref_en_dolares') return;
-    const monto = parseFloat(data.monto_bs) || 0;
     const tcr = parseFloat(data.tcr) || 0;
-    const resultado = tcr > 0 ? (monto / tcr).toFixed(2) : '0';
-    if (data.ref_en_dolares !== resultado) {
-      setData((prev: any) => ({ ...prev, ref_en_dolares: resultado }));
-    }
-  }, [data.monto_bs, data.tcr]);
+    if (tcr === 0) return;
 
-  // ✅ Si el usuario edita Ref. en Dólares o TCR → calcula Monto Bs
-  useEffect(() => {
-    if (lastEdited.current === 'monto_bs') return;
-    const ref = parseFloat(data.ref_en_dolares) || 0;
-    const tcr = parseFloat(data.tcr) || 0;
-    const resultado = (ref * tcr).toFixed(2);
-    if (data.monto_bs !== resultado) {
-      setData((prev: any) => ({ ...prev, monto_bs: resultado }));
+    if (lastEdited.current === 'monto_bs') {
+      // Usuario editó Monto Bs → calcular Ref. en Dólares
+      const monto = parseFloat(data.monto_bs) || 0;
+      const resultado = (monto / tcr).toFixed(2);
+      if (data.ref_en_dolares !== resultado) {
+        setData((prev: any) => ({ ...prev, ref_en_dolares: resultado }));
+      }
+    } else if (lastEdited.current === 'ref_en_dolares') {
+      // Usuario editó Ref. en Dólares → calcular Monto Bs
+      const ref = parseFloat(data.ref_en_dolares) || 0;
+      const resultado = (ref * tcr).toFixed(2);
+      if (data.monto_bs !== resultado) {
+        setData((prev: any) => ({ ...prev, monto_bs: resultado }));
+      }
     }
-  }, [data.ref_en_dolares, data.tcr]);
+  }, [data.monto_bs, data.ref_en_dolares, data.tcr]);
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     if (e.target.value === '0') {
@@ -154,7 +154,7 @@ export default function PaymentSection({
             {/* Fila 2: Montos principales */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-              {/* ✅ Monto Bs — editable, también se recalcula si el usuario toca Ref. en Dólares */}
+              {/* Monto Bs */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Monto Bs <span className="text-xs text-slate-400 font-normal">(Ref. $ × TCR)</span>
@@ -164,7 +164,7 @@ export default function PaymentSection({
                   value={data.monto_bs || '0'}
                   onChange={(e) => {
                     lastEdited.current = 'monto_bs';
-                    setData({ ...data, monto_bs: e.target.value });
+                    setData((prev: any) => ({ ...prev, monto_bs: e.target.value }));
                   }}
                   onFocus={handleFocus}
                   onBlur={(e) => handleBlur(e, 'monto_bs')}
@@ -177,6 +177,7 @@ export default function PaymentSection({
                 />
               </div>
 
+              {/* TCR */}
               <Input
                 label="TCR"
                 type="number"
@@ -187,7 +188,7 @@ export default function PaymentSection({
                 disabled={isReadOnly}
               />
 
-              {/* ✅ Ref. en Dólares — editable, también se recalcula si el usuario toca Monto Bs */}
+              {/* Ref. en Dólares */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Ref. en Dólares <span className="text-xs text-slate-400 font-normal">(Monto Bs ÷ TCR)</span>
@@ -197,7 +198,7 @@ export default function PaymentSection({
                   value={data.ref_en_dolares || '0'}
                   onChange={(e) => {
                     lastEdited.current = 'ref_en_dolares';
-                    setData({ ...data, ref_en_dolares: e.target.value });
+                    setData((prev: any) => ({ ...prev, ref_en_dolares: e.target.value }));
                   }}
                   onFocus={handleFocus}
                   onBlur={(e) => handleBlur(e, 'ref_en_dolares')}
