@@ -59,10 +59,26 @@ export default function LiquidationSection({
 
   if (!billExists) return null;
 
-  const isDisabled = loading || !canEdit || !data.tipo_siniestro;
+  const isReadOnly = !canEdit;
+  const isDevuelto = billState === 'devuelto';
+  const isDisabled = loading || isReadOnly || !data.tipo_siniestro;
 
   return (
     <div className="space-y-6">
+
+      {/* Banner Modo Lectura */}
+      {isReadOnly && !isDevuelto && (
+        <div className="bg-amber-50 border-l-4 border-amber-400 p-4 shadow-sm rounded-r-lg flex items-center">
+          <div className="ml-3">
+            <p className="text-sm text-amber-800">
+              Usted está en modo <span className="font-bold">Vista Previa</span>. 
+              Su rol actual (<span className="font-mono bg-amber-100 px-1 rounded">{userRole}</span>) no permite editar esta sección.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Barra de estado */}
       <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg flex justify-between text-[10px] text-slate-500 font-bold uppercase tracking-wider">
         <span>
           Acceso: <span className="text-slate-800">{userRole || 'ADMIN'}</span>
@@ -72,6 +88,7 @@ export default function LiquidationSection({
         </span>
       </div>
 
+      {/* Card principal */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
@@ -84,6 +101,8 @@ export default function LiquidationSection({
         </div>
 
         <div className="p-6 space-y-6">
+
+          {/* Fila 1: Fecha y Tipo de Siniestro */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
             <Input label="Fecha de Liquidación" value={data.fecha_liquidacion} disabled readOnly />
             <Select
@@ -93,10 +112,11 @@ export default function LiquidationSection({
                 setData({ ...data, tipo_siniestro: e.target.value })
               }
               options={CLAIM_TYPES.map((t) => ({ value: t, label: t }))}
-              disabled={!canEdit}
+              disabled={isReadOnly}
             />
           </div>
 
+          {/* Fila 2: Monto Facturado, Monto AMP, GNA */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Monto Facturado *</label>
@@ -134,24 +154,25 @@ export default function LiquidationSection({
               type="number"
               value={data.gna}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('gna', e.target.value)}
-              disabled={!canEdit}
+              disabled={isReadOnly}
             />
           </div>
 
+          {/* Fila 3: Honorarios, Servicios Clínicos, Retención */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
             <Input
               label="Honorarios Médicos"
               type="number"
               value={data.honorarios_medic}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('honorarios_medic', e.target.value)}
-              disabled={!canEdit}
+              disabled={isReadOnly}
             />
             <Input
               label="Servicios Clínicos"
               type="number"
               value={data.servicios_clinicos}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('servicios_clinicos', e.target.value)}
-              disabled={!canEdit}
+              disabled={isReadOnly}
             />
             <div>
               <label className="block text-sm font-medium text-slate-400 mb-1">Retención 5% (Calculada)</label>
@@ -161,6 +182,7 @@ export default function LiquidationSection({
             </div>
           </div>
 
+          {/* Fila 4: Monto Indemnizado y Nomenclatura de Lote */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Monto Indemnizado</label>
@@ -183,10 +205,11 @@ export default function LiquidationSection({
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setData({ ...data, nomenclature_pile: e.target.value })
               }
-              disabled={!canEdit}
+              disabled={isReadOnly}
             />
           </div>
 
+          {/* Analista Liquidador */}
           <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 flex items-center justify-between">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-tight mb-1">
@@ -206,6 +229,7 @@ export default function LiquidationSection({
         </div>
       </div>
 
+      {/* Botón */}
       <div className="flex justify-end pt-2">
         <Button
           onClick={() => onSave(data)}
@@ -216,7 +240,7 @@ export default function LiquidationSection({
               : 'hover:shadow-md bg-[#1a56ff] hover:bg-[#0044ff] text-white'
             }`}
         >
-          {loading ? 'Guardando...' : 'Guardar Liquidación'}
+          {isReadOnly ? 'MODO LECTURA' : loading ? 'Guardando...' : 'Guardar Liquidación'}
         </Button>
       </div>
 
