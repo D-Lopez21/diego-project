@@ -1,5 +1,6 @@
 import { EditIcon, TrashIcon } from './icons';
 import { useNavigate } from 'react-router';
+import { useAuth } from '../hooks/useAuth';
 
 interface BillsTableProps {
   bills: any[];
@@ -15,22 +16,27 @@ export default function BillsTable({
   bills, loading, error, searchTerm, filterType, getProviderName, onDelete 
 }: BillsTableProps) {
 
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const role = user?.user_metadata?.role || user?.profile?.role || '';
+  const isAdmin    = role === 'admin';
+  const isProveedor = role === 'proveedor';
 
   const filteredBills = bills.filter((bill) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
 
     switch (filterType) {
-      case 'number': return bill.n_billing?.toLowerCase().includes(term);
+      case 'number':   return bill.n_billing?.toLowerCase().includes(term);
       case 'provider': return getProviderName(bill.suppliers_id).toLowerCase().includes(term);
-      case 'lot': return bill.nomenclature_pile?.toLowerCase().includes(term);
-      default: return true;
+      case 'lot':      return bill.nomenclature_pile?.toLowerCase().includes(term);
+      default:         return true;
     }
   });
 
   if (loading) return <div className="py-10 text-center text-neutral-500 italic">Cargando facturas...</div>;
-  if (error) return <div className="py-10 text-center text-red-500">Error: {error}</div>;
+  if (error)   return <div className="py-10 text-center text-red-500">Error: {error}</div>;
 
   return (
     <div className="w-full overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
@@ -68,18 +74,31 @@ export default function BillsTable({
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <button 
-                        onClick={() => navigate(`/bills/${bill.id}`)} // Cambia window.location por navigate
-                          className="p-1.5 text-neutral-400 hover:text-blue-600 transition-colors"
-                        >
-                          <EditIcon className="size-5" />
-                        </button>
-                      <button 
-                        onClick={() => onDelete(bill.id)} 
-                        className="p-1.5 text-neutral-400 hover:text-red-600 transition-colors"
+
+                      {/* Editar — visible para todos */}
+                      <button
+                        onClick={() => navigate(`/bills/${bill.id}`)}
+                        className="p-1.5 text-neutral-400 hover:text-blue-600 transition-colors"
                       >
-                        <TrashIcon className="size-5" />
+                        <EditIcon className="size-5" />
                       </button>
+
+                      {/* Eliminar — oculto para proveedor, deshabilitado para no-admin */}
+                      {!isProveedor && (
+                        <button
+                          onClick={() => isAdmin && onDelete(bill.id)}
+                          disabled={!isAdmin}
+                          title={!isAdmin ? 'Solo administradores pueden eliminar facturas' : 'Eliminar factura'}
+                          className={`p-1.5 transition-colors ${
+                            isAdmin
+                              ? 'text-neutral-400 hover:text-red-600 cursor-pointer'
+                              : 'text-neutral-200 cursor-not-allowed'
+                          }`}
+                        >
+                          <TrashIcon className="size-5" />
+                        </button>
+                      )}
+
                     </div>
                   </td>
                 </tr>
