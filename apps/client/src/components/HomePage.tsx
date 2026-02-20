@@ -51,10 +51,11 @@ const ActionCard = ({
   const styles = colorStyles[color];
 
   return (
+    // ✅ h-full para estirarse al alto del row
     <div className={`group bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl ${styles.hover} transition-all duration-300 flex flex-col hover:-translate-y-1 overflow-hidden h-full`}>
 
       {/* Header */}
-      <div className="p-4 pb-3 flex items-center gap-3">
+      <div className="p-4 pb-3 flex items-center gap-3 flex-shrink-0">
         <div className={`w-10 h-10 rounded-xl flex-shrink-0 ${styles.iconBg} flex items-center justify-center shadow-md transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
           <Icon className="w-5 h-5 text-white" />
         </div>
@@ -65,10 +66,10 @@ const ActionCard = ({
       </div>
 
       {/* Divider */}
-      <div className="h-px bg-slate-100 mx-4" />
+      <div className="h-px bg-slate-100 mx-4 flex-shrink-0" />
 
-      {/* Features */}
-      <div className={`mx-4 my-3 rounded-xl ${styles.featureBg} border ${styles.border} px-3 py-2.5 flex flex-col gap-1.5`}>
+      {/* Features — flex-1 para ocupar el espacio disponible */}
+      <div className={`mx-4 my-3 rounded-xl ${styles.featureBg} border ${styles.border} px-3 py-3 flex flex-col justify-center gap-2 flex-1`}>
         {features.map((f) => (
           <div key={f} className="flex items-center gap-2">
             <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${styles.dot}`} />
@@ -77,8 +78,8 @@ const ActionCard = ({
         ))}
       </div>
 
-      {/* Botón */}
-      <div className="px-4 pb-4 mt-auto">
+      {/* Botón siempre al fondo */}
+      <div className="px-4 pb-4 flex-shrink-0">
         <Button
           onClick={onClick}
           className={`w-full bg-gradient-to-r ${styles.accent} hover:opacity-90 text-white font-semibold py-2 rounded-xl shadow-md transition-all duration-300 text-sm`}
@@ -105,18 +106,19 @@ export default function HomePage() {
       </div>
 
       <div className="max-w-7xl mx-auto relative">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 items-start">
+        {/* ✅ items-stretch: todas las celdas del grid tienen el mismo alto */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 items-stretch">
 
-          {/* Perfil — items-start para que NO se estire */}
-          <div className="lg:col-span-1 animate-fade-in">
+          {/* Perfil — h-full para que ocupe todo el alto disponible */}
+          <div className="lg:col-span-1 animate-fade-in h-full">
             <UserProfileCard />
           </div>
 
-          {/* Acciones */}
-          <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {/* Acciones — items-stretch para que las 3 tarjetas también se igualen entre sí */}
+          <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch">
             {isAdmin ? (
               <>
-                <div className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                <div className="animate-fade-in-up h-full" style={{ animationDelay: '100ms' }}>
                   <ActionCard
                     title="Usuarios"
                     description="Administra los roles y permisos del sistema."
@@ -130,7 +132,7 @@ export default function HomePage() {
                     ]}
                   />
                 </div>
-                <div className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                <div className="animate-fade-in-up h-full" style={{ animationDelay: '200ms' }}>
                   <ActionCard
                     title="Proveedores"
                     description="Gestiona el directorio de proveedores."
@@ -146,7 +148,7 @@ export default function HomePage() {
                 </div>
               </>
             ) : null}
-            <div className="animate-fade-in-up" style={{ animationDelay: isAdmin ? '300ms' : '100ms' }}>
+            <div className="animate-fade-in-up h-full" style={{ animationDelay: isAdmin ? '300ms' : '100ms' }}>
               <ActionCard
                 title="Facturas"
                 description="Controla el historial de facturación."

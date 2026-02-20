@@ -31,10 +31,10 @@ export default function UserProfileCard() {
   const roleInfo = roleLabels[role] ?? { label: role, color: 'bg-slate-100 text-slate-600 ring-slate-200' };
 
   return (
-    <div className="rounded-2xl bg-white border border-slate-200 shadow-sm">
-      {/* Header con gradiente — sin overflow-hidden aquí */}
-      <div className="rounded-t-2xl bg-gradient-to-br from-blue-500 to-cyan-400 px-6 py-6 relative overflow-hidden">
-        {/* Patrón decorativo */}
+    // ✅ h-full para que se estire al alto del row
+    <div className="rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col h-full">
+      {/* Header con gradiente */}
+      <div className="rounded-t-2xl bg-gradient-to-br from-blue-500 to-cyan-400 px-6 py-6 relative overflow-hidden flex-shrink-0">
         <div
           className="absolute inset-0 opacity-20"
           style={{
@@ -42,7 +42,6 @@ export default function UserProfileCard() {
             backgroundSize: '20px 20px',
           }}
         />
-        {/* Avatar */}
         <div className="relative z-10 flex justify-center">
           <div className="w-16 h-16 rounded-2xl bg-white/25 flex items-center justify-center text-white font-bold text-2xl shadow-md ring-4 ring-white/40 select-none">
             {initials}
@@ -50,9 +49,9 @@ export default function UserProfileCard() {
         </div>
       </div>
 
-      {/* Cuerpo */}
-      <div className="px-6 pt-4 pb-6">
-        {/* Badge de rol */}
+      {/* Cuerpo — flex-1 para ocupar el espacio restante */}
+      <div className="px-6 pt-4 pb-6 flex flex-col flex-1">
+        {/* Badge */}
         <div className="flex justify-center mb-3">
           <span className={`text-xs font-semibold px-3 py-1 rounded-full ring-1 ${roleInfo.color}`}>
             {roleInfo.label}
@@ -60,7 +59,7 @@ export default function UserProfileCard() {
         </div>
 
         {/* Nombre y email */}
-        <div className="text-center mb-5">
+        <div className="text-center mb-4">
           <h2 className="font-bold text-slate-800 text-lg leading-tight">{name}</h2>
           <p className="text-sm text-slate-400 mt-0.5 truncate">{email}</p>
         </div>
@@ -68,14 +67,16 @@ export default function UserProfileCard() {
         {/* Divider */}
         <div className="h-px bg-slate-100 mb-4" />
 
-        {/* Botón */}
-        <button
-          onClick={() => navigate('/change-password')}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-800 transition-all duration-200 group"
-        >
-          <EditIcon className="w-4 h-4 text-slate-400 group-hover:text-blue-500 transition-colors" />
-          Cambiar Contraseña
-        </button>
+        {/* ✅ mt-auto empuja el botón al fondo */}
+        <div className="mt-auto">
+          <button
+            onClick={() => navigate('/change-password')}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-800 transition-all duration-200 group"
+          >
+            <EditIcon className="w-4 h-4 text-slate-400 group-hover:text-blue-500 transition-colors" />
+            Cambiar Contraseña
+          </button>
+        </div>
       </div>
     </div>
   );
