@@ -42,8 +42,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const heartbeatIntervalRef = React.useRef<number | null>(null);
   const checkActiveTabIntervalRef = React.useRef<number | null>(null);
   const hasAttemptedActivation = React.useRef(false);
-  // ✅ Ref para rastrear el valor actual sin causar re-renders ni re-ejecuciones de efectos
   const isActiveTabRef = React.useRef(false);
+  // ✅ Flag para saber si el auth ya fue inicializado (no volver a hacerlo)
+  const authInitializedRef = React.useRef(false);
 
   const fetchProfile = React.useCallback(async (currentUser: User): Promise<AuthUser> => {
     try {
@@ -106,24 +107,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return false;
   }, [canBeActiveTab]);
 
-  const forceBeActiveTab = React.useCallback(() => {
-    const now = Date.now();
-    localStorage.setItem(ACTIVE_TAB_KEY, TAB_ID);
-    localStorage.setItem(TAB_HEARTBEAT_KEY, now.toString());
-    localStorage.setItem(TAB_TIMESTAMP_KEY, now.toString());
-
-    console.log('🔨 FORZANDO esta pestaña como activa:', TAB_ID);
-
-    isActiveTabRef.current = true;
-    setIsActiveTab(true);
-    setIsChecking(false);
-
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-    }
-    heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
-  }, [sendHeartbeat]);
-
   const validateUserSession = React.useCallback(async (currentUserId: string): Promise<boolean> => {
     const storedUserId = localStorage.getItem('current_user_id');
 
@@ -140,7 +123,80 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return true;
   }, []);
 
-  // ✅ useEffect 1: SOLO manejo de pestañas - corre una sola vez al montar
+  // ✅ Inicializar auth UNA SOLA VEZ - no depende de isActiveTab
+  const initializeAuth = React.useCallback(async () => {
+    if (authInitializedRef.current) return; // ← Ya inicializado, no volver a correr
+    authInitializedRef.current = true;
+
+    try {
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+
+      if (initialSession?.user) {
+        const isValid = await validateUserSession(initialSession.user.id);
+        if (!isValid) return;
+
+        const userWithProfile = await fetchProfile(initialSession.user);
+        setSession(initialSession);
+        setUser(userWithProfile);
+      }
+    } catch (error) {
+      console.error('Error inicializando auth:', error);
+    } finally {
+      setIsLoading(false);
+    }
+
+    // Suscripción permanente - nunca se desmonta mientras la app vive
+    supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      console.log('🔔 Auth event:', event);
+
+      // ✅ Ignorar SIGNED_IN si ya tenemos sesión (evita re-fetch innecesario al volver de pestaña)
+      if (event === 'SIGNED_IN' && session !== null) return;
+
+      setSession(currentSession);
+
+      if (currentSession?.user) {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          const isValid = await validateUserSession(currentSession.user.id);
+          if (!isValid) return;
+        }
+
+        if (event === 'SIGNED_IN') {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+
+        const userWithProfile = await fetchProfile(currentSession.user);
+        setUser(userWithProfile);
+      } else {
+        setUser(null);
+        localStorage.removeItem('current_user_id');
+      }
+
+      setIsLoading(false);
+    });
+  }, [fetchProfile, validateUserSession, session]);
+
+  const forceBeActiveTab = React.useCallback(() => {
+    const now = Date.now();
+    localStorage.setItem(ACTIVE_TAB_KEY, TAB_ID);
+    localStorage.setItem(TAB_HEARTBEAT_KEY, now.toString());
+    localStorage.setItem(TAB_TIMESTAMP_KEY, now.toString());
+
+    console.log('🔨 FORZANDO esta pestaña como activa:', TAB_ID);
+
+    isActiveTabRef.current = true;
+    setIsActiveTab(true);
+    setIsChecking(false);
+
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+    }
+    heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+
+    // ✅ Inicializar auth si aún no se hizo (caso de forzar desde pestaña inactiva)
+    initializeAuth();
+  }, [sendHeartbeat, initializeAuth]);
+
+  // ✅ useEffect 1: Manejo de pestañas - corre una sola vez
   React.useEffect(() => {
     if (!hasAttemptedActivation.current) {
       hasAttemptedActivation.current = true;
@@ -151,11 +207,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsChecking(false);
 
       if (gotControl) {
+        // ✅ Inicializar auth inmediatamente si somos la pestaña activa
+        initializeAuth();
+
         heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
 
         checkActiveTabIntervalRef.current = window.setInterval(() => {
           const activeTabId = localStorage.getItem(ACTIVE_TAB_KEY);
-          // ✅ Solo actualiza estado si realmente cambió a inactiva
           if (activeTabId !== TAB_ID && isActiveTabRef.current) {
             console.log('⚠️ Otra pestaña tomó el control');
             isActiveTabRef.current = false;
@@ -169,16 +227,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       } else {
         console.warn('⚠️ Esta pestaña NO es activa. Esperando...');
+        setIsLoading(false);
 
         checkActiveTabIntervalRef.current = window.setInterval(() => {
-          // ✅ Solo intenta tomar control si actualmente NO es activa
           if (!isActiveTabRef.current && canBeActiveTab()) {
             const gotControl = tryTakeControl();
             if (gotControl) {
               console.log('✅ Tomando control de pestaña inactiva');
               isActiveTabRef.current = true;
-              setIsActiveTab(true); // ← Solo se llama UNA vez cuando realmente cambia
+              setIsActiveTab(true);
               heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+              // ✅ Inicializar auth ahora que somos activos
+              initializeAuth();
             }
           }
         }, HEARTBEAT_INTERVAL);
@@ -213,81 +273,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
   }, []); // ← array vacío: solo al montar
-
-  // ✅ useEffect 2: SOLO autenticación - se activa cuando isActiveTab cambia
-  React.useEffect(() => {
-    if (!isActiveTab) {
-      setIsLoading(false);
-      return;
-    }
-
-    let isMounted = true;
-    let authSubscription: ReturnType<typeof supabase.auth.onAuthStateChange>['data']['subscription'] | null = null;
-
-    const initializeAuth = async () => {
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-
-        if (!isMounted) return;
-
-        if (initialSession?.user) {
-          const isValid = await validateUserSession(initialSession.user.id);
-          if (!isValid || !isMounted) return;
-
-          const userWithProfile = await fetchProfile(initialSession.user);
-          if (isMounted) {
-            setSession(initialSession);
-            setUser(userWithProfile);
-          }
-        }
-      } catch (error) {
-        console.error('Error inicializando auth:', error);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (event, currentSession) => {
-          if (!isMounted) return;
-
-          console.log('🔔 Auth event:', event);
-          setSession(currentSession);
-
-          if (currentSession?.user) {
-            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-              const isValid = await validateUserSession(currentSession.user.id);
-              if (!isValid || !isMounted) return;
-            }
-
-            if (event === 'SIGNED_IN') {
-              await new Promise((resolve) => setTimeout(resolve, 500));
-            }
-
-            if (!isMounted) return;
-
-            const userWithProfile = await fetchProfile(currentSession.user);
-            if (isMounted) setUser(userWithProfile);
-          } else {
-            if (isMounted) {
-              setUser(null);
-              localStorage.removeItem('current_user_id');
-            }
-          }
-
-          if (isMounted) setIsLoading(false);
-        }
-      );
-
-      authSubscription = subscription;
-    };
-
-    initializeAuth();
-
-    return () => {
-      isMounted = false;
-      if (authSubscription) authSubscription.unsubscribe();
-    };
-  }, [isActiveTab, fetchProfile, validateUserSession]);
 
   if (isChecking) {
     return (
