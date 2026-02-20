@@ -8,9 +8,8 @@ export default function UserProfileCard() {
 
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuario';
   const email = user?.email || '';
-  const role = user?.user_metadata?.role || user?.profile?.role || 'Usuario';
+  const role = user?.user_metadata?.role || user?.profile?.role || 'usuario';
 
-  // Iniciales para el avatar
   const initials = name
     .split(' ')
     .map((n: string) => n[0])
@@ -32,9 +31,9 @@ export default function UserProfileCard() {
   const roleInfo = roleLabels[role] ?? { label: role, color: 'bg-slate-100 text-slate-600 ring-slate-200' };
 
   return (
-    <div className="relative rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
-      {/* Header con gradiente */}
-      <div className="h-20 bg-gradient-to-br from-blue-500 to-cyan-400 relative">
+    <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+      {/* Header con gradiente y avatar centrado */}
+      <div className="bg-gradient-to-br from-blue-500 to-cyan-400 px-6 pt-6 pb-10 relative">
         <div className="absolute inset-0 opacity-20"
           style={{
             backgroundImage: `radial-gradient(circle at 20% 50%, white 1px, transparent 1px),
@@ -42,22 +41,25 @@ export default function UserProfileCard() {
             backgroundSize: '30px 30px'
           }}
         />
-      </div>
-
-      {/* Avatar flotante */}
-      <div className="px-6 pb-6">
-        <div className="flex items-end justify-between -mt-8 mb-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-white font-bold text-xl shadow-lg ring-4 ring-white select-none">
+        {/* Avatar centrado dentro del header */}
+        <div className="relative z-10 flex justify-center">
+          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold text-2xl shadow-lg ring-4 ring-white/30 select-none">
             {initials}
           </div>
-          {/* Badge de rol */}
-          <span className={`text-xs font-semibold px-3 py-1 rounded-full ring-1 ${roleInfo.color}`}>
+        </div>
+      </div>
+
+      {/* Contenido debajo del header */}
+      <div className="px-6 pb-6 -mt-5">
+        {/* Badge de rol centrado, flotando entre header y contenido */}
+        <div className="flex justify-center mb-4">
+          <span className={`text-xs font-semibold px-3 py-1 rounded-full ring-1 bg-white shadow-sm ${roleInfo.color}`}>
             {roleInfo.label}
           </span>
         </div>
 
         {/* Info */}
-        <div className="space-y-1 mb-5">
+        <div className="text-center space-y-1 mb-5">
           <h2 className="font-bold text-slate-800 text-lg leading-tight">{name}</h2>
           <p className="text-sm text-slate-400 truncate">{email}</p>
         </div>
