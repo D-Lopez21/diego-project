@@ -9,60 +9,68 @@ const css = `
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 20px;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
     box-shadow: 0 2px 12px rgba(0,0,0,0.04);
     overflow: hidden;
     font-family: 'DM Sans', sans-serif;
     animation: upc-fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
     position: relative;
+    display: flex;
+    align-items: center;
+    padding: 24px 28px;
+    gap: 20px;
   }
 
-  .upc-card::before {
+  /* Línea índigo izquierda */
+  .upc-card::after {
     content: '';
     position: absolute;
     top: 0; left: 0;
-    width: 100%; height: 3px;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6);
-    z-index: 1;
-  }
-
-  .upc-top {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 32px 24px 20px;
+    width: 4px; height: 100%;
+    background: linear-gradient(to bottom, #6366f1, #8b5cf6);
+    border-radius: 4px 0 0 4px;
   }
 
   .upc-avatar {
-    width: 68px;
-    height: 68px;
-    border-radius: 18px;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
     background: linear-gradient(135deg, #6366f1, #8b5cf6);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 700;
     color: white;
-    box-shadow: 0 6px 24px rgba(99,102,241,0.28);
+    box-shadow: 0 4px 20px rgba(99,102,241,0.28);
     letter-spacing: 1px;
     user-select: none;
-    margin-bottom: 14px;
+    flex-shrink: 0;
+  }
+
+  .upc-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
   }
 
   .upc-badge {
     display: inline-flex;
     align-items: center;
+    gap: 5px;
     font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
     border-radius: 99px;
-    padding: 4px 12px;
-    margin-bottom: 12px;
+    padding: 3px 10px;
     border: 1px solid transparent;
+    align-self: flex-start;
+    margin-bottom: 2px;
   }
+
+  .upc-badge svg { flex-shrink: 0; }
 
   .upc-badge-admin        { background: rgba(99,102,241,0.08);  color: #6366f1; border-color: rgba(99,102,241,0.2); }
   .upc-badge-recepcion    { background: rgba(139,92,246,0.08);  color: #7c3aed; border-color: rgba(139,92,246,0.2); }
@@ -76,44 +84,27 @@ const css = `
 
   .upc-name {
     font-family: 'DM Serif Display', serif;
-    font-size: 21px;
+    font-size: 26px;
     color: #0f172a;
-    line-height: 1.15;
-    text-align: center;
-    margin-bottom: 4px;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .upc-email {
-    font-size: 12.5px;
+    font-size: 13px;
     color: #94a3b8;
-    text-align: center;
-    max-width: 200px;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .upc-body {
-    padding: 0 20px 20px;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-  }
-
-  .upc-divider {
-    height: 1px;
-    background: #f1f5f9;
-    margin-bottom: 16px;
   }
 
   .upc-btn {
-    margin-top: auto;
-    width: 100%;
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 7px;
-    padding: 10px 16px;
+    padding: 10px 18px;
     border-radius: 11px;
     font-size: 13px;
     font-weight: 500;
@@ -123,6 +114,8 @@ const css = `
     background: #f8fafc;
     color: #64748b;
     transition: background 0.15s, color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .upc-btn:hover { background: #f1f5f9; color: #334155; border-color: #cbd5e1; }
@@ -136,8 +129,13 @@ const css = `
   }
 
   @keyframes upc-fadeUp {
-    from { opacity: 0; transform: translateY(16px); }
+    from { opacity: 0; transform: translateY(14px); }
     to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 600px) {
+    .upc-card { flex-wrap: wrap; }
+    .upc-btn  { width: 100%; justify-content: center; }
   }
 `;
 
@@ -174,20 +172,23 @@ export default function UserProfileCard() {
       <style>{css}</style>
       <div className="upc-card">
 
-        <div className="upc-top">
-          <div className="upc-avatar">{initials}</div>
-          <div className={`upc-badge ${roleInfo.cls}`}>{roleInfo.label}</div>
-          <div className="upc-name">{name}</div>
+        <div className="upc-avatar">{initials}</div>
+
+        <div className="upc-info">
+          <div className={`upc-badge ${roleInfo.cls}`}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            {roleInfo.label}
+          </div>
+          <div className="upc-name">Bienvenido, {name.split(' ')[0]}</div>
           <div className="upc-email">{email}</div>
         </div>
 
-        <div className="upc-body">
-          <div className="upc-divider" />
-          <button className="upc-btn" onClick={() => navigate('/change-password')}>
-            <EditIcon className="upc-edit-icon" />
-            Cambiar contraseña
-          </button>
-        </div>
+        <button className="upc-btn" onClick={() => navigate('/change-password')}>
+          <EditIcon className="upc-edit-icon" />
+          Cambiar contraseña
+        </button>
 
       </div>
     </>

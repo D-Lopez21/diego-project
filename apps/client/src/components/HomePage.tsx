@@ -33,7 +33,6 @@ const ActionCard = ({
     display: 'flex',
     flexDirection: 'column',
     gap: 16,
-    cursor: 'pointer',
     boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
     height: '100%',
     transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
@@ -92,8 +91,10 @@ const ActionCard = ({
       onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(1.07)')}
       onMouseLeave={e => (e.currentTarget.style.filter = 'brightness(1)')}
     >
-      Ver Tabla
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      Ver tabla
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
     </button>
   </div>
 );
@@ -150,29 +151,31 @@ export default function HomePage() {
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-        {/* Section label */}
+        {/* Profile card — fila completa arriba */}
+        <div style={{ animation: 'hp-fadeUp 0.35s cubic-bezier(0.16,1,0.3,1) both' }}>
+          <UserProfileCard />
+        </div>
+
+        {/* Label de módulos */}
         <div style={{
           fontSize: 11, fontWeight: 600, letterSpacing: 2,
           textTransform: 'uppercase', color: '#94a3b8',
         }}>
-          Resumen
+          Módulos del sistema
         </div>
 
-        {/* Grid: profile + module cards */}
+        {/* Cards de módulos — fila de 3 (o las que correspondan al rol) */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+          gridTemplateColumns: `repeat(${visibleCards.length}, 1fr)`,
           gap: 16,
           alignItems: 'stretch',
         }}>
-          {/* Profile card */}
-          <UserProfileCard />
-
-          {/* Module cards */}
           {visibleCards.map((card, i) => (
-            <div key={card.key} style={{
-              animation: `hp-fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) ${(i + 1) * 60}ms both`,
-            }}>
+            <div
+              key={card.key}
+              style={{ animation: `hp-fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) ${(i + 1) * 70}ms both` }}
+            >
               <ActionCard
                 title={card.title}
                 description={card.description}
@@ -186,12 +189,19 @@ export default function HomePage() {
             </div>
           ))}
         </div>
+
       </div>
 
       <style>{`
         @keyframes hp-fadeUp {
           from { opacity: 0; transform: translateY(16px); }
           to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+          .hp-modules-grid {
+            grid-template-columns: 1fr !important;
+          }
         }
       `}</style>
     </DashboardLayout>
