@@ -38,23 +38,14 @@ export default function PaymentSection({
     return clean;
   };
 
-  // --- Lógica de Validación Blindada ---
   const isFormValid = () => {
-    // Convertimos a String antes de validar para evitar el error .trim()
     const montoStr = String(data.monto_bs || '');
     const tcrStr = String(data.tcr || '');
     const refDolarStr = String(data.ref_en_dolares || '');
     const refBancariaStr = String(data.ref_bancaria || '');
-
-    const tieneMonto = montoStr.length > 0;
-    const tieneTcr = tcrStr.length > 0;
-    const tieneRefDolar = refDolarStr.length > 0;
-    const tieneReferencia = refBancariaStr.trim().length > 0;
-
-    return tieneMonto && tieneTcr && tieneRefDolar && tieneReferencia;
+    return montoStr.length > 0 && tcrStr.length > 0 && refDolarStr.length > 0 && refBancariaStr.trim().length > 0;
   };
 
-  // --- Handlers de cambio ---
   const handleMontoChange = (raw: string) => {
     lastEdited.current = 'monto_bs';
     const clean = cleanNumeric(raw);
@@ -94,9 +85,19 @@ export default function PaymentSection({
     setData((prev: any) => ({ ...prev, ref_en_dolares: clean, monto_bs: monto }));
   };
 
-  const onFocusMonto = () => setLocalMonto(String(data.monto_bs) === '0' ? '' : (String(data.monto_bs) || ''));
-  const onFocusTcr = () => setLocalTcr(String(data.tcr) === '0' ? '' : (String(data.tcr) || ''));
-  const onFocusRef = () => setLocalRef(String(data.ref_en_dolares) === '0' ? '' : (String(data.ref_en_dolares) || ''));
+  // Al hacer focus: si el valor es '0' o vacío, limpia el campo
+  const onFocusMonto = () => {
+    const val = String(data.monto_bs || '');
+    setLocalMonto(val === '0' || val === '' ? '' : val);
+  };
+  const onFocusTcr = () => {
+    const val = String(data.tcr || '');
+    setLocalTcr(val === '0' || val === '' ? '' : val);
+  };
+  const onFocusRef = () => {
+    const val = String(data.ref_en_dolares || '');
+    setLocalRef(val === '0' || val === '' ? '' : val);
+  };
 
   const onBlurMonto = () => {
     const val = localMonto ?? data.monto_bs;
@@ -114,9 +115,10 @@ export default function PaymentSection({
     setLocalRef(null);
   };
 
-  const montoDisplay = localMonto !== null ? localMonto : (data.monto_bs || '');
-  const tcrDisplay = localTcr !== null ? localTcr : (data.tcr || '');
-  const refDisplay = localRef !== null ? localRef : (data.ref_en_dolares || '');
+  // Muestra '0' visualmente cuando no hay valor, pero sin guardarlo en el estado
+  const montoDisplay = localMonto !== null ? localMonto : (String(data.monto_bs || '') || '0');
+  const tcrDisplay   = localTcr   !== null ? localTcr   : (String(data.tcr   || '') || '0');
+  const refDisplay   = localRef   !== null ? localRef   : (String(data.ref_en_dolares || '') || '0');
 
   if (!billExists) {
     return (
@@ -128,6 +130,7 @@ export default function PaymentSection({
 
   const isReadOnly = !canEdit;
   const isDevuelto = billState === 'devuelto';
+  const isDisabled = loading || isReadOnly || !isFormValid();
 
   const getPagadorName = () => {
     if (!currentBill?.analyst_paid) return 'No asignado';
@@ -154,6 +157,13 @@ export default function PaymentSection({
         ? 'bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed'
         : 'bg-white border-slate-200 focus:ring-2 focus:ring-blue-500 text-slate-800'
     }`;
+
+  // Chip de fórmula que aparece junto al label
+  const FormulaChip = ({ formula }: { formula: string }) => (
+    <span className="ml-2 text-[11px] font-normal font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+      {formula}
+    </span>
+  );
 
   return (
     <>
@@ -212,9 +222,11 @@ export default function PaymentSection({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Monto Bs */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Monto Bs <span className="text-red-500">*</span>
+                  <FormulaChip formula="Ref$ × TCR" />
                 </label>
                 <input
                   type="text"
@@ -228,9 +240,11 @@ export default function PaymentSection({
                 />
               </div>
 
+              {/* TCR */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   TCR <span className="text-red-500">*</span>
+                  <FormulaChip formula="Bs ÷ Ref$" />
                 </label>
                 <input
                   type="text"
@@ -244,9 +258,11 @@ export default function PaymentSection({
                 />
               </div>
 
+              {/* Ref en Dólares */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Ref. en Dólares <span className="text-red-500">*</span>
+                  <FormulaChip formula="Bs ÷ TCR" />
                 </label>
                 <input
                   type="text"
@@ -316,11 +332,12 @@ export default function PaymentSection({
         <div className="flex justify-end pt-2">
           <Button
             type="submit"
-            disabled={loading || isReadOnly || !isFormValid()}
+            disabled={isDisabled}
             className={`min-w-[220px] py-3 rounded-lg shadow-sm font-bold transition-all
-              ${(isReadOnly || !isFormValid())
-                ? 'bg-slate-100 text-slate-400 border border-slate-200'
-                : 'bg-[#1a56ff] hover:bg-[#0044ff] text-white'}`}
+              ${isDisabled
+                ? 'bg-[#a5b4fc] text-white border-0 cursor-not-allowed'
+                : 'bg-[#1a56ff] hover:bg-[#0044ff] text-white'
+              }`}
           >
             {isReadOnly ? 'MODO LECTURA' : 'Guardar Ejecución'}
           </Button>
