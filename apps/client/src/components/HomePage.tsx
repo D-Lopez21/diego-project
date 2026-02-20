@@ -1,4 +1,4 @@
-import { Button, DashboardLayout } from './common';
+import { DashboardLayout } from './common';
 import { BriefcaseIcon, ReceiptIcon, UserIcon } from './icons';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +9,9 @@ interface ActionCardProps {
   description: string;
   icon: React.ElementType;
   onClick: () => void;
-  color: 'blue' | 'green' | 'amber';
+  accent: string;
+  accentBg: string;
+  btnGradient: string;
   features: string[];
 }
 
@@ -18,175 +20,179 @@ const ActionCard = ({
   description,
   icon: Icon,
   onClick,
-  color,
+  accent,
+  accentBg,
+  btnGradient,
   features,
-}: ActionCardProps) => {
-  const colorStyles = {
-    blue: {
-      iconBg: 'bg-gradient-to-br from-blue-500 to-cyan-400',
-      accent: 'from-blue-500 to-cyan-500',
-      hover: 'group-hover:shadow-blue-500/20',
-      dot: 'bg-blue-400',
-      border: 'border-blue-100',
-      featureBg: 'bg-blue-50/60',
-    },
-    green: {
-      iconBg: 'bg-gradient-to-br from-green-500 to-emerald-400',
-      accent: 'from-green-500 to-emerald-500',
-      hover: 'group-hover:shadow-green-500/20',
-      dot: 'bg-green-400',
-      border: 'border-green-100',
-      featureBg: 'bg-green-50/60',
-    },
-    amber: {
-      iconBg: 'bg-gradient-to-br from-amber-500 to-orange-400',
-      accent: 'from-amber-500 to-orange-500',
-      hover: 'group-hover:shadow-amber-500/20',
-      dot: 'bg-amber-400',
-      border: 'border-amber-100',
-      featureBg: 'bg-amber-50/60',
-    },
-  };
-
-  const styles = colorStyles[color];
-
-  return (
-    // ✅ h-full para estirarse al alto del row
-    <div className={`group bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl ${styles.hover} transition-all duration-300 flex flex-col hover:-translate-y-1 overflow-hidden h-full`}>
-
-      {/* Header */}
-      <div className="p-4 pb-3 flex items-center gap-3 flex-shrink-0">
-        <div className={`w-10 h-10 rounded-xl flex-shrink-0 ${styles.iconBg} flex items-center justify-center shadow-md transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
-          <Icon className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h3 className="text-base font-bold text-slate-800 leading-tight">{title}</h3>
-          <p className="text-xs text-slate-400 leading-snug mt-0.5">{description}</p>
-        </div>
+}: ActionCardProps) => (
+  <div style={{
+    background: '#ffffff',
+    border: '1px solid #e2e8f0',
+    borderRadius: 20,
+    padding: 24,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+    cursor: 'pointer',
+    boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+    height: '100%',
+    transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
+  }}
+    onMouseEnter={e => {
+      (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)';
+      (e.currentTarget as HTMLDivElement).style.boxShadow = '0 12px 32px rgba(0,0,0,0.09)';
+      (e.currentTarget as HTMLDivElement).style.borderColor = '#cbd5e1';
+    }}
+    onMouseLeave={e => {
+      (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
+      (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)';
+      (e.currentTarget as HTMLDivElement).style.borderColor = '#e2e8f0';
+    }}
+  >
+    {/* Header */}
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+      <div style={{
+        width: 44, height: 44, borderRadius: 12,
+        background: accentBg, color: accent,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+      }}>
+        <Icon style={{ width: 20, height: 20 }} />
       </div>
-
-      {/* Divider */}
-      <div className="h-px bg-slate-100 mx-4 flex-shrink-0" />
-
-      {/* Features — flex-1 para ocupar el espacio disponible */}
-      <div className={`mx-4 my-3 rounded-xl ${styles.featureBg} border ${styles.border} px-3 py-3 flex flex-col justify-center gap-2 flex-1`}>
-        {features.map((f) => (
-          <div key={f} className="flex items-center gap-2">
-            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${styles.dot}`} />
-            <span className="text-xs text-slate-600">{f}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Botón siempre al fondo */}
-      <div className="px-4 pb-4 flex-shrink-0">
-        <Button
-          onClick={onClick}
-          className={`w-full bg-gradient-to-r ${styles.accent} hover:opacity-90 text-white font-semibold py-2 rounded-xl shadow-md transition-all duration-300 text-sm`}
-        >
-          Ver Tabla
-        </Button>
+      <div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: '#1e293b', marginBottom: 4 }}>{title}</div>
+        <div style={{ fontSize: 12.5, color: '#94a3b8', lineHeight: 1.5 }}>{description}</div>
       </div>
     </div>
-  );
-};
+
+    {/* Divider */}
+    <div style={{ height: 1, background: '#f1f5f9' }} />
+
+    {/* Features */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+      {features.map(f => (
+        <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: '#64748b' }}>
+          <div style={{ width: 5, height: 5, borderRadius: '50%', background: accent, flexShrink: 0 }} />
+          {f}
+        </div>
+      ))}
+    </div>
+
+    {/* Button */}
+    <button
+      onClick={onClick}
+      style={{
+        width: '100%', padding: '11px', borderRadius: 11,
+        fontSize: 13, fontWeight: 600, fontFamily: 'DM Sans, sans-serif',
+        cursor: 'pointer', border: 'none', color: 'white',
+        background: btnGradient,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+        transition: 'filter 0.15s',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(1.07)')}
+      onMouseLeave={e => (e.currentTarget.style.filter = 'brightness(1)')}
+    >
+      Ver Tabla
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+);
+
+const MODULE_CARDS = [
+  {
+    key: 'usuarios',
+    title: 'Usuarios',
+    description: 'Administra los roles y permisos del sistema.',
+    icon: UserIcon,
+    accent: '#6366f1',
+    accentBg: 'rgba(99,102,241,0.08)',
+    btnGradient: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+    route: '/users',
+    adminOnly: true,
+    features: ['Crear y editar usuarios', 'Asignar roles y permisos', 'Activar o desactivar cuentas'],
+  },
+  {
+    key: 'proveedores',
+    title: 'Proveedores',
+    description: 'Gestiona el directorio de proveedores.',
+    icon: BriefcaseIcon,
+    accent: '#f59e0b',
+    accentBg: 'rgba(245,158,11,0.08)',
+    btnGradient: 'linear-gradient(135deg,#f59e0b,#d97706)',
+    route: '/providers',
+    adminOnly: true,
+    features: ['Registrar nuevos proveedores', 'Editar información de contacto', 'Consultar historial de facturas'],
+  },
+  {
+    key: 'facturas',
+    title: 'Facturas',
+    description: 'Controla el historial de facturación.',
+    icon: ReceiptIcon,
+    accent: '#10b981',
+    accentBg: 'rgba(16,185,129,0.08)',
+    btnGradient: 'linear-gradient(135deg,#10b981,#059669)',
+    route: '/bills',
+    adminOnly: false,
+    features: ['Crear y gestionar facturas', 'Filtrar por N° Factura', 'Filtrar por Proveedor o Lote'],
+  },
+];
 
 export default function HomePage() {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
+
+  const visibleCards = MODULE_CARDS.filter(c => !c.adminOnly || isAdmin);
 
   return (
     <DashboardLayout
       title="Dashboard"
       subtitle={`Bienvenido de nuevo, ${user?.user_metadata?.name || 'Usuario'}`}
     >
-      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-        <div className="absolute top-20 right-10 w-64 h-64 bg-blue-400/5 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-20 left-10 w-80 h-80 bg-cyan-400/5 rounded-full blur-3xl animate-float-delayed" />
-      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-      <div className="max-w-7xl mx-auto relative">
-        {/* ✅ items-stretch: todas las celdas del grid tienen el mismo alto */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 items-stretch">
+        {/* Section label */}
+        <div style={{
+          fontSize: 11, fontWeight: 600, letterSpacing: 2,
+          textTransform: 'uppercase', color: '#94a3b8',
+        }}>
+          Resumen
+        </div>
 
-          {/* Perfil — h-full para que ocupe todo el alto disponible */}
-          <div className="lg:col-span-1 animate-fade-in h-full">
-            <UserProfileCard />
-          </div>
+        {/* Grid: profile + module cards */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+          gap: 16,
+          alignItems: 'stretch',
+        }}>
+          {/* Profile card */}
+          <UserProfileCard />
 
-          {/* Acciones — items-stretch para que las 3 tarjetas también se igualen entre sí */}
-          <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch">
-            {isAdmin ? (
-              <>
-                <div className="animate-fade-in-up h-full" style={{ animationDelay: '100ms' }}>
-                  <ActionCard
-                    title="Usuarios"
-                    description="Administra los roles y permisos del sistema."
-                    icon={UserIcon}
-                    color="blue"
-                    onClick={() => navigate('/users')}
-                    features={[
-                      'Crear y editar usuarios',
-                      'Asignar roles y permisos',
-                      'Activar o desactivar cuentas',
-                    ]}
-                  />
-                </div>
-                <div className="animate-fade-in-up h-full" style={{ animationDelay: '200ms' }}>
-                  <ActionCard
-                    title="Proveedores"
-                    description="Gestiona el directorio de proveedores."
-                    icon={BriefcaseIcon}
-                    color="amber"
-                    onClick={() => navigate('/providers')}
-                    features={[
-                      'Registrar nuevos proveedores',
-                      'Editar información de contacto',
-                      'Consultar historial de facturas',
-                    ]}
-                  />
-                </div>
-              </>
-            ) : null}
-            <div className="animate-fade-in-up h-full" style={{ animationDelay: isAdmin ? '300ms' : '100ms' }}>
+          {/* Module cards */}
+          {visibleCards.map((card, i) => (
+            <div key={card.key} style={{
+              animation: `hp-fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) ${(i + 1) * 60}ms both`,
+            }}>
               <ActionCard
-                title="Facturas"
-                description="Controla el historial de facturación."
-                icon={ReceiptIcon}
-                color="green"
-                onClick={() => navigate('/bills')}
-                features={[
-                  'Crear y gestionar facturas',
-                  'Filtrar por N° Factura',
-                  'Filtrar por Proveedor o Lote',
-                ]}
+                title={card.title}
+                description={card.description}
+                icon={card.icon}
+                accent={card.accent}
+                accentBg={card.accentBg}
+                btnGradient={card.btnGradient}
+                onClick={() => navigate(card.route)}
+                features={card.features}
               />
             </div>
-          </div>
+          ))}
         </div>
       </div>
 
       <style>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+        @keyframes hp-fadeUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
-        @keyframes fade-in-up {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes float {
-          0%, 100% { transform: translate(0, 0); }
-          50% { transform: translate(20px, -20px); }
-        }
-        @keyframes float-delayed {
-          0%, 100% { transform: translate(0, 0); }
-          50% { transform: translate(-20px, 20px); }
-        }
-        .animate-fade-in { animation: fade-in 0.6s ease-out; }
-        .animate-fade-in-up { animation: fade-in-up 0.6s ease-out backwards; }
-        .animate-float { animation: float 8s ease-in-out infinite; }
-        .animate-float-delayed { animation: float-delayed 10s ease-in-out infinite 2s; }
       `}</style>
     </DashboardLayout>
   );

@@ -2,13 +2,163 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { EditIcon } from './icons';
 
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  .upc-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    overflow: hidden;
+    font-family: 'DM Sans', sans-serif;
+    animation: upc-fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
+    position: relative;
+  }
+
+  .upc-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 3px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    z-index: 1;
+  }
+
+  .upc-top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 24px 20px;
+  }
+
+  .upc-avatar {
+    width: 68px;
+    height: 68px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 700;
+    color: white;
+    box-shadow: 0 6px 24px rgba(99,102,241,0.28);
+    letter-spacing: 1px;
+    user-select: none;
+    margin-bottom: 14px;
+  }
+
+  .upc-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border-radius: 99px;
+    padding: 4px 12px;
+    margin-bottom: 12px;
+    border: 1px solid transparent;
+  }
+
+  .upc-badge-admin        { background: rgba(99,102,241,0.08);  color: #6366f1; border-color: rgba(99,102,241,0.2); }
+  .upc-badge-recepcion    { background: rgba(139,92,246,0.08);  color: #7c3aed; border-color: rgba(139,92,246,0.2); }
+  .upc-badge-liquidacion  { background: rgba(245,158,11,0.08);  color: #d97706; border-color: rgba(245,158,11,0.2); }
+  .upc-badge-auditoria    { background: rgba(239,68,68,0.08);   color: #dc2626; border-color: rgba(239,68,68,0.2); }
+  .upc-badge-pagos        { background: rgba(16,185,129,0.08);  color: #059669; border-color: rgba(16,185,129,0.2); }
+  .upc-badge-finiquito    { background: rgba(6,182,212,0.08);   color: #0891b2; border-color: rgba(6,182,212,0.2); }
+  .upc-badge-programacion { background: rgba(99,102,241,0.08);  color: #4f46e5; border-color: rgba(99,102,241,0.2); }
+  .upc-badge-proveedor    { background: rgba(249,115,22,0.08);  color: #ea580c; border-color: rgba(249,115,22,0.2); }
+  .upc-badge-default      { background: rgba(100,116,139,0.08); color: #475569; border-color: rgba(100,116,139,0.2); }
+
+  .upc-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 21px;
+    color: #0f172a;
+    line-height: 1.15;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+
+  .upc-email {
+    font-size: 12.5px;
+    color: #94a3b8;
+    text-align: center;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .upc-body {
+    padding: 0 20px 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .upc-divider {
+    height: 1px;
+    background: #f1f5f9;
+    margin-bottom: 16px;
+  }
+
+  .upc-btn {
+    margin-top: auto;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 16px;
+    border-radius: 11px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #64748b;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+
+  .upc-btn:hover { background: #f1f5f9; color: #334155; border-color: #cbd5e1; }
+  .upc-btn:hover .upc-edit-icon { color: #6366f1; }
+
+  .upc-edit-icon {
+    color: #94a3b8;
+    transition: color 0.15s;
+    width: 14px;
+    height: 14px;
+  }
+
+  @keyframes upc-fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+`;
+
+const roleLabels: Record<string, { label: string; cls: string }> = {
+  admin:        { label: 'Administrador', cls: 'upc-badge-admin' },
+  recepcion:    { label: 'Recepción',     cls: 'upc-badge-recepcion' },
+  liquidacion:  { label: 'Liquidación',   cls: 'upc-badge-liquidacion' },
+  auditoria:    { label: 'Auditoría',     cls: 'upc-badge-auditoria' },
+  pagos:        { label: 'Pagos',         cls: 'upc-badge-pagos' },
+  finiquito:    { label: 'Finiquito',     cls: 'upc-badge-finiquito' },
+  programacion: { label: 'Programación',  cls: 'upc-badge-programacion' },
+  proveedor:    { label: 'Proveedor',     cls: 'upc-badge-proveedor' },
+};
+
 export default function UserProfileCard() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const name = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuario';
+  const name  = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuario';
   const email = user?.email || '';
-  const role = user?.user_metadata?.role || user?.profile?.role || 'usuario';
+  const role  = user?.user_metadata?.role || user?.profile?.role || 'usuario';
 
   const initials = name
     .split(' ')
@@ -17,67 +167,29 @@ export default function UserProfileCard() {
     .join('')
     .toUpperCase();
 
-  const roleLabels: Record<string, { label: string; color: string }> = {
-    admin: { label: 'Administrador', color: 'bg-blue-100 text-blue-700 ring-blue-200' },
-    recepcion: { label: 'Recepción', color: 'bg-violet-100 text-violet-700 ring-violet-200' },
-    liquidacion: { label: 'Liquidación', color: 'bg-amber-100 text-amber-700 ring-amber-200' },
-    auditoria: { label: 'Auditoría', color: 'bg-rose-100 text-rose-700 ring-rose-200' },
-    pagos: { label: 'Pagos', color: 'bg-emerald-100 text-emerald-700 ring-emerald-200' },
-    finiquito: { label: 'Finiquito', color: 'bg-cyan-100 text-cyan-700 ring-cyan-200' },
-    programacion: { label: 'Programación', color: 'bg-indigo-100 text-indigo-700 ring-indigo-200' },
-    proveedor: { label: 'Proveedor', color: 'bg-orange-100 text-orange-700 ring-orange-200' },
-  };
-
-  const roleInfo = roleLabels[role] ?? { label: role, color: 'bg-slate-100 text-slate-600 ring-slate-200' };
+  const roleInfo = roleLabels[role] ?? { label: role, cls: 'upc-badge-default' };
 
   return (
-    // ✅ h-full para que se estire al alto del row
-    <div className="rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col h-full">
-      {/* Header con gradiente */}
-      <div className="rounded-t-2xl bg-gradient-to-br from-blue-500 to-cyan-400 px-6 py-6 relative overflow-hidden flex-shrink-0">
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: `radial-gradient(circle, white 1px, transparent 1px)`,
-            backgroundSize: '20px 20px',
-          }}
-        />
-        <div className="relative z-10 flex justify-center">
-          <div className="w-16 h-16 rounded-2xl bg-white/25 flex items-center justify-center text-white font-bold text-2xl shadow-md ring-4 ring-white/40 select-none">
-            {initials}
-          </div>
-        </div>
-      </div>
+    <>
+      <style>{css}</style>
+      <div className="upc-card">
 
-      {/* Cuerpo — flex-1 para ocupar el espacio restante */}
-      <div className="px-6 pt-4 pb-6 flex flex-col flex-1">
-        {/* Badge */}
-        <div className="flex justify-center mb-3">
-          <span className={`text-xs font-semibold px-3 py-1 rounded-full ring-1 ${roleInfo.color}`}>
-            {roleInfo.label}
-          </span>
+        <div className="upc-top">
+          <div className="upc-avatar">{initials}</div>
+          <div className={`upc-badge ${roleInfo.cls}`}>{roleInfo.label}</div>
+          <div className="upc-name">{name}</div>
+          <div className="upc-email">{email}</div>
         </div>
 
-        {/* Nombre y email */}
-        <div className="text-center mb-4">
-          <h2 className="font-bold text-slate-800 text-lg leading-tight">{name}</h2>
-          <p className="text-sm text-slate-400 mt-0.5 truncate">{email}</p>
-        </div>
-
-        {/* Divider */}
-        <div className="h-px bg-slate-100 mb-4" />
-
-        {/* ✅ mt-auto empuja el botón al fondo */}
-        <div className="mt-auto">
-          <button
-            onClick={() => navigate('/change-password')}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-800 transition-all duration-200 group"
-          >
-            <EditIcon className="w-4 h-4 text-slate-400 group-hover:text-blue-500 transition-colors" />
-            Cambiar Contraseña
+        <div className="upc-body">
+          <div className="upc-divider" />
+          <button className="upc-btn" onClick={() => navigate('/change-password')}>
+            <EditIcon className="upc-edit-icon" />
+            Cambiar contraseña
           </button>
         </div>
+
       </div>
-    </div>
+    </>
   );
 }
