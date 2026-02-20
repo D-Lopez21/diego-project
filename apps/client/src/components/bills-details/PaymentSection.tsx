@@ -222,18 +222,25 @@ export default function PaymentSection({
               {/* ── MONTO INDEMNIZADO (solo lectura, viene de liquidación) ── */}
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Monto Indemnizado</label>
-                <input
-                  type="text"
-                  value={
-                    currentBill?.indemnizable_rate != null
-                      ? Number(currentBill.indemnizable_rate).toLocaleString('es-VE', {
-                          minimumFractionDigits: 2,
-                        })
-                      : '0,00'
-                  }
-                  readOnly
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed outline-none"
-                />
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    value={
+                      currentBill?.indemnizable_rate != null
+                        ? Number(currentBill.indemnizable_rate).toLocaleString('es-VE', {
+                            minimumFractionDigits: 2,
+                          })
+                        : '0,00'
+                    }
+                    readOnly
+                    className="w-full px-4 py-2.5 pr-14 bg-slate-50 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed outline-none"
+                  />
+                  {currentBill?.currency_type && (
+                    <span className="absolute right-3 text-xs font-bold text-slate-400 uppercase pointer-events-none">
+                      {currentBill.currency_type}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
