@@ -157,8 +157,8 @@ export default function HomePage() {
                 onClick={() => navigate('/bills')}
                 features={[
                   'Crear y gestionar facturas',
-                  'Filtrar por fecha y estado',
-                  'Exportar reportes',
+                  'Filtrar por N° Factura',
+                  'Filtrar por Proveedor o Lote',
                 ]}
               />
             </div>
