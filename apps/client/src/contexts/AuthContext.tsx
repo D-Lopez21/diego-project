@@ -43,8 +43,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const checkActiveTabIntervalRef = React.useRef<number | null>(null);
   const hasAttemptedActivation = React.useRef(false);
   const isActiveTabRef = React.useRef(false);
-  // ✅ Flag para saber si el auth ya fue inicializado (no volver a hacerlo)
   const authInitializedRef = React.useRef(false);
+  // ✅ Ref para saber si ya tenemos sesión sin depender del closure
+  const hasSessionRef = React.useRef(false);
 
   const fetchProfile = React.useCallback(async (currentUser: User): Promise<AuthUser> => {
     try {
@@ -123,15 +124,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return true;
   }, []);
 
-  // ✅ Inicializar auth UNA SOLA VEZ - no depende de isActiveTab
   const initializeAuth = React.useCallback(async () => {
-    if (authInitializedRef.current) return; // ← Ya inicializado, no volver a correr
+    if (authInitializedRef.current) return;
     authInitializedRef.current = true;
 
     try {
       const { data: { session: initialSession } } = await supabase.auth.getSession();
 
       if (initialSession?.user) {
+        hasSessionRef.current = true; // ✅ Marcar que tenemos sesión
         const isValid = await validateUserSession(initialSession.user.id);
         if (!isValid) return;
 
@@ -145,12 +146,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(false);
     }
 
-    // Suscripción permanente - nunca se desmonta mientras la app vive
+    // Suscripción permanente
     supabase.auth.onAuthStateChange(async (event, currentSession) => {
       console.log('🔔 Auth event:', event);
 
-      // ✅ Ignorar SIGNED_IN si ya tenemos sesión (evita re-fetch innecesario al volver de pestaña)
-      if (event === 'SIGNED_IN' && session !== null) return;
+      // ✅ Usar ref en lugar de closure para verificar si ya tenemos sesión
+      if (event === 'SIGNED_IN' && hasSessionRef.current) {
+        console.log('ℹ️ SIGNED_IN ignorado - sesión ya activa');
+        return;
+      }
+
+      if (currentSession) {
+        hasSessionRef.current = true;
+      } else {
+        hasSessionRef.current = false;
+      }
 
       setSession(currentSession);
 
@@ -173,7 +183,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       setIsLoading(false);
     });
-  }, [fetchProfile, validateUserSession, session]);
+  }, [fetchProfile, validateUserSession]);
 
   const forceBeActiveTab = React.useCallback(() => {
     const now = Date.now();
@@ -192,11 +202,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
 
-    // ✅ Inicializar auth si aún no se hizo (caso de forzar desde pestaña inactiva)
     initializeAuth();
   }, [sendHeartbeat, initializeAuth]);
 
-  // ✅ useEffect 1: Manejo de pestañas - corre una sola vez
+  // ✅ useEffect único: manejo de pestañas + arranque de auth
   React.useEffect(() => {
     if (!hasAttemptedActivation.current) {
       hasAttemptedActivation.current = true;
@@ -207,7 +216,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsChecking(false);
 
       if (gotControl) {
-        // ✅ Inicializar auth inmediatamente si somos la pestaña activa
         initializeAuth();
 
         heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
@@ -237,7 +245,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               isActiveTabRef.current = true;
               setIsActiveTab(true);
               heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
-              // ✅ Inicializar auth ahora que somos activos
               initializeAuth();
             }
           }
@@ -272,7 +279,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.removeItem(TAB_HEARTBEAT_KEY);
       }
     };
-  }, []); // ← array vacío: solo al montar
+  }, []);
 
   if (isChecking) {
     return (
