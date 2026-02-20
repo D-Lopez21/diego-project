@@ -139,16 +139,13 @@ const MODULE_CARDS = [
 ];
 
 export default function HomePage() {
-  const { user, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const visibleCards = MODULE_CARDS.filter(c => !c.adminOnly || isAdmin);
 
   return (
-    <DashboardLayout
-      title="Dashboard"
-      subtitle={`Bienvenido de nuevo, ${user?.user_metadata?.name || 'Usuario'}`}
-    >
+    <DashboardLayout>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
         {/* Profile card — fila completa arriba */}
