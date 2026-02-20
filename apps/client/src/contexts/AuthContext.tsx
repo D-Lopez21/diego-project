@@ -25,7 +25,6 @@ interface AuthContextType {
 
 export const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
-// ✅ Generar ID único para esta pestaña
 const TAB_ID = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 const ACTIVE_TAB_KEY = 'active_tab_id';
 const TAB_HEARTBEAT_KEY = 'tab_heartbeat';
@@ -43,6 +42,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const heartbeatIntervalRef = React.useRef<number | null>(null);
   const checkActiveTabIntervalRef = React.useRef<number | null>(null);
   const hasAttemptedActivation = React.useRef(false);
+  // ✅ Ref para rastrear el valor actual sin causar re-renders ni re-ejecuciones de efectos
+  const isActiveTabRef = React.useRef(false);
 
   const fetchProfile = React.useCallback(async (currentUser: User): Promise<AuthUser> => {
     try {
@@ -53,7 +54,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .single();
 
       if (error) {
-        console.warn('Perfil no encontrado (puede ser un usuario nuevo):', error.message);
+        console.warn('Perfil no encontrado:', error.message);
         return currentUser;
       }
 
@@ -113,6 +114,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     console.log('🔨 FORZANDO esta pestaña como activa:', TAB_ID);
 
+    isActiveTabRef.current = true;
     setIsActiveTab(true);
     setIsChecking(false);
 
@@ -126,15 +128,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const storedUserId = localStorage.getItem('current_user_id');
 
     if (storedUserId && storedUserId !== currentUserId) {
-      console.warn('⚠️ Detectado cambio de usuario. Cerrando sesión anterior...');
-
+      console.warn('⚠️ Detectado cambio de usuario. Cerrando sesión...');
       localStorage.clear();
       sessionStorage.clear();
-
       await supabase.auth.signOut();
-
       window.location.href = '/login';
-
       return false;
     }
 
@@ -142,24 +140,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return true;
   }, []);
 
-  // ✅ useEffect 1: SOLO manejo de pestañas - array vacío, corre una sola vez al montar
+  // ✅ useEffect 1: SOLO manejo de pestañas - corre una sola vez al montar
   React.useEffect(() => {
     if (!hasAttemptedActivation.current) {
       hasAttemptedActivation.current = true;
 
       const gotControl = tryTakeControl();
+      isActiveTabRef.current = gotControl;
       setIsActiveTab(gotControl);
       setIsChecking(false);
 
       if (gotControl) {
-        console.log('✅ Esta es la pestaña activa:', TAB_ID);
-
         heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
 
         checkActiveTabIntervalRef.current = window.setInterval(() => {
           const activeTabId = localStorage.getItem(ACTIVE_TAB_KEY);
-          if (activeTabId !== TAB_ID) {
+          // ✅ Solo actualiza estado si realmente cambió a inactiva
+          if (activeTabId !== TAB_ID && isActiveTabRef.current) {
             console.log('⚠️ Otra pestaña tomó el control');
+            isActiveTabRef.current = false;
             setIsActiveTab(false);
             if (heartbeatIntervalRef.current) {
               clearInterval(heartbeatIntervalRef.current);
@@ -167,14 +166,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
           }
         }, HEARTBEAT_INTERVAL);
+
       } else {
         console.warn('⚠️ Esta pestaña NO es activa. Esperando...');
 
         checkActiveTabIntervalRef.current = window.setInterval(() => {
-          if (canBeActiveTab()) {
+          // ✅ Solo intenta tomar control si actualmente NO es activa
+          if (!isActiveTabRef.current && canBeActiveTab()) {
             const gotControl = tryTakeControl();
             if (gotControl) {
-              setIsActiveTab(true);
+              console.log('✅ Tomando control de pestaña inactiva');
+              isActiveTabRef.current = true;
+              setIsActiveTab(true); // ← Solo se llama UNA vez cuando realmente cambia
               heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
             }
           }
@@ -185,8 +188,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === ACTIVE_TAB_KEY) {
         const newActiveTab = e.newValue;
-        if (newActiveTab !== TAB_ID && newActiveTab !== null) {
+        if (newActiveTab !== TAB_ID && newActiveTab !== null && isActiveTabRef.current) {
           console.log('⚠️ Otra pestaña tomó el control vía storage');
+          isActiveTabRef.current = false;
           setIsActiveTab(false);
           if (heartbeatIntervalRef.current) {
             clearInterval(heartbeatIntervalRef.current);
@@ -200,19 +204,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
       if (checkActiveTabIntervalRef.current) clearInterval(checkActiveTabIntervalRef.current);
-
       const activeTabId = localStorage.getItem(ACTIVE_TAB_KEY);
       if (activeTabId === TAB_ID) {
         localStorage.removeItem(ACTIVE_TAB_KEY);
         localStorage.removeItem(TAB_HEARTBEAT_KEY);
       }
     };
-  }, []); // ← array vacío: solo al montar/desmontar
+  }, []); // ← array vacío: solo al montar
 
-  // ✅ useEffect 2: SOLO autenticación - se activa cuando isActiveTab cambia a true
+  // ✅ useEffect 2: SOLO autenticación - se activa cuando isActiveTab cambia
   React.useEffect(() => {
     if (!isActiveTab) {
       setIsLoading(false);
@@ -230,11 +232,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (initialSession?.user) {
           const isValid = await validateUserSession(initialSession.user.id);
-
           if (!isValid || !isMounted) return;
 
           const userWithProfile = await fetchProfile(initialSession.user);
-
           if (isMounted) {
             setSession(initialSession);
             setUser(userWithProfile);
@@ -251,7 +251,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           if (!isMounted) return;
 
           console.log('🔔 Auth event:', event);
-
           setSession(currentSession);
 
           if (currentSession?.user) {
@@ -267,7 +266,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (!isMounted) return;
 
             const userWithProfile = await fetchProfile(currentSession.user);
-
             if (isMounted) setUser(userWithProfile);
           } else {
             if (isMounted) {
@@ -289,9 +287,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isMounted = false;
       if (authSubscription) authSubscription.unsubscribe();
     };
-  }, [isActiveTab, fetchProfile, validateUserSession]); // ← solo estas dependencias
+  }, [isActiveTab, fetchProfile, validateUserSession]);
 
-  // ✅ Pantalla de carga inicial
   if (isChecking) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-cyan-50">
@@ -304,7 +301,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  // ✅ Si no es la pestaña activa, mostrar mensaje
   if (!isActiveTab) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
