@@ -44,7 +44,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const hasAttemptedActivation = React.useRef(false);
   const isActiveTabRef = React.useRef(false);
   const authInitializedRef = React.useRef(false);
-  // ✅ Ref para saber si ya tenemos sesión sin depender del closure
   const hasSessionRef = React.useRef(false);
 
   const fetchProfile = React.useCallback(async (currentUser: User): Promise<AuthUser> => {
@@ -132,7 +131,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data: { session: initialSession } } = await supabase.auth.getSession();
 
       if (initialSession?.user) {
-        hasSessionRef.current = true; // ✅ Marcar que tenemos sesión
+        hasSessionRef.current = true;
         const isValid = await validateUserSession(initialSession.user.id);
         if (!isValid) return;
 
@@ -146,11 +145,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(false);
     }
 
-    // Suscripción permanente
     supabase.auth.onAuthStateChange(async (event, currentSession) => {
       console.log('🔔 Auth event:', event);
 
-      // ✅ Usar ref en lugar de closure para verificar si ya tenemos sesión
       if (event === 'SIGNED_IN' && hasSessionRef.current) {
         console.log('ℹ️ SIGNED_IN ignorado - sesión ya activa');
         return;
@@ -205,8 +202,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     initializeAuth();
   }, [sendHeartbeat, initializeAuth]);
 
-  // ✅ useEffect único: manejo de pestañas + arranque de auth
   React.useEffect(() => {
+    // ✅ Limpiar el control al cerrar o recargar la página
+    const handleBeforeUnload = () => {
+      const activeTabId = localStorage.getItem(ACTIVE_TAB_KEY);
+      if (activeTabId === TAB_ID) {
+        localStorage.removeItem(ACTIVE_TAB_KEY);
+        localStorage.removeItem(TAB_HEARTBEAT_KEY);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     if (!hasAttemptedActivation.current) {
       hasAttemptedActivation.current = true;
 
@@ -217,7 +224,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (gotControl) {
         initializeAuth();
-
         heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
 
         checkActiveTabIntervalRef.current = window.setInterval(() => {
@@ -270,6 +276,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     window.addEventListener('storage', handleStorageChange);
 
     return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('storage', handleStorageChange);
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
       if (checkActiveTabIntervalRef.current) clearInterval(checkActiveTabIntervalRef.current);
