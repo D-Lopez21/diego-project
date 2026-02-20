@@ -40,7 +40,7 @@ const ActionCard = ({
   const styles = colorStyles[color];
 
   return (
-    <div className={`group bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg ${styles.hover} transition-all duration-300 flex flex-col justify-between hover:-translate-y-1 relative overflow-hidden`}>
+    <div className={`group bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg ${styles.hover} transition-all duration-300 flex flex-col justify-between hover:-translate-y-1 relative overflow-hidden h-full`}>
       {/* Decorative gradient corner */}
       <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${styles.accent} opacity-5 rounded-bl-full transition-opacity duration-300 group-hover:opacity-10`} />
       
@@ -84,19 +84,21 @@ export default function HomePage() {
       </div>
 
       <div className="max-w-7xl mx-auto relative">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
-          {/* Perfil más estilizado a la izquierda */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-6 animate-fade-in">
+        {/* ✅ Grid principal con items-stretch para que todas las celdas tengan el mismo alto */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 items-stretch">
+          
+          {/* Perfil — ocupa 1 columna y se estira al alto del row */}
+          <div className="lg:col-span-1 animate-fade-in">
+            <div className="h-full">
               <UserProfileCard />
             </div>
           </div>
 
-          {/* Grid de Acciones */}
-          <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {/* Grid de Acciones — ocupa 3 columnas */}
+          <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch">
             {isAdmin ? (
               <>
-                <div className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                <div className="animate-fade-in-up flex" style={{ animationDelay: '100ms' }}>
                   <ActionCard
                     title="Usuarios"
                     description="Administra los roles y crea nuevos usuarios para el sistema."
@@ -105,7 +107,7 @@ export default function HomePage() {
                     onClick={() => navigate('/users')}
                   />
                 </div>
-                <div className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                <div className="animate-fade-in-up flex" style={{ animationDelay: '200ms' }}>
                   <ActionCard
                     title="Proveedores"
                     description="Gestiona los proveedores y su información de contacto."
@@ -116,7 +118,7 @@ export default function HomePage() {
                 </div>
               </>
             ) : null}
-            <div className="animate-fade-in-up" style={{ animationDelay: isAdmin ? '300ms' : '100ms' }}>
+            <div className="animate-fade-in-up flex" style={{ animationDelay: isAdmin ? '300ms' : '100ms' }}>
               <ActionCard
                 title="Facturas"
                 description="Visualiza, crea y gestiona el historial de facturación."
@@ -131,60 +133,25 @@ export default function HomePage() {
 
       <style>{`
         @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-
         @keyframes fade-in-up {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-
         @keyframes float {
-          0%, 100% {
-            transform: translate(0, 0);
-          }
-          50% {
-            transform: translate(20px, -20px);
-          }
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(20px, -20px); }
         }
-
         @keyframes float-delayed {
-          0%, 100% {
-            transform: translate(0, 0);
-          }
-          50% {
-            transform: translate(-20px, 20px);
-          }
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-20px, 20px); }
         }
-
-        .animate-fade-in {
-          animation: fade-in 0.6s ease-out;
-        }
-
-        .animate-fade-in-up {
-          animation: fade-in-up 0.6s ease-out backwards;
-        }
-
-        .animate-float {
-          animation: float 8s ease-in-out infinite;
-        }
-
-        .animate-float-delayed {
-          animation: float-delayed 10s ease-in-out infinite 2s;
-        }
+        .animate-fade-in { animation: fade-in 0.6s ease-out; }
+        .animate-fade-in-up { animation: fade-in-up 0.6s ease-out backwards; }
+        .animate-float { animation: float 8s ease-in-out infinite; }
+        .animate-float-delayed { animation: float-delayed 10s ease-in-out infinite 2s; }
       `}</style>
     </DashboardLayout>
   );
