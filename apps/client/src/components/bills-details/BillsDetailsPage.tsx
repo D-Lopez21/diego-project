@@ -329,7 +329,6 @@ export default function BillsDetailsPage({
             state_sequence: 'auditoria',
           };
         } else if (section === 'programacion') {
-          // ✅ FIX: uso de optional chaining para evitar crash si sectionData es undefined
           const newState = sectionData?.decision_adm === 'DEVUELTO' ? 'devuelto' : 'programado';
           updatePayload = {
             programmed_date: new Date().toISOString(),
@@ -387,8 +386,14 @@ export default function BillsDetailsPage({
 
   const billExists = !!billId && billId !== 'create-bill';
 
+  // ── Título dinámico según rol ──────────────────────────────────────────────
+  const isProveedor = currentUserRole === 'proveedor';
+  const pageTitle = isProveedor
+    ? 'Ver Factura'
+    : billExists ? 'Editar Factura' : 'Nueva Factura';
+
   return (
-    <DashboardLayout title={billExists ? 'Editar Factura' : 'Nueva Factura'} returnTo="/bills">
+    <DashboardLayout title={pageTitle} returnTo="/bills">
       <BillModal isOpen={modalOpen} onClose={() => setModalOpen(false)} message={modalMessage} type={modalType} />
       <TabSelector sections={sections} activeSection={activeSection} onSectionChange={setActiveSection} />
       <div className="min-h-100 p-4">
