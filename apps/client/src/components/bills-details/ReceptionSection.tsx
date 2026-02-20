@@ -35,10 +35,11 @@ export default function ReceptionSection({
     );
   };
 
+  const isDisabled = loading || isReadOnly || !isFormValid();
+
   const formatCurrency = (value: string | number) => {
     if (!value) return '';
     const number = typeof value === 'string' ? parseFloat(value) : value;
-
     return new Intl.NumberFormat('es-VE', {
       style: 'decimal',
       minimumFractionDigits: 2,
@@ -50,19 +51,12 @@ export default function ReceptionSection({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (isReadOnly) {
-          alert('No tienes permisos para guardar cambios en esta sección');
-          return;
-        }
-        if (!isFormValid()) {
-          alert('Por favor, completa todos los campos requeridos antes de guardar.');
-          return;
-        }
-        onSave(data); // ✅ FIX: se pasa `data` correctamente
+        if (isReadOnly) { alert('No tienes permisos para guardar cambios en esta sección'); return; }
+        if (!isFormValid()) { alert('Por favor, completa todos los campos requeridos antes de guardar.'); return; }
+        onSave(data);
       }}
       className="space-y-6"
     >
-      {/* Banner de Estado: Solo Lectura */}
       {isReadOnly && !isDevuelto && (
         <div className="bg-amber-50 border-l-4 border-amber-400 p-4 shadow-sm rounded-r-lg flex items-center transition-all">
           <div className="flex-shrink-0">
@@ -78,7 +72,6 @@ export default function ReceptionSection({
         </div>
       )}
 
-      {/* Contenedor Principal (Card) */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
@@ -91,8 +84,6 @@ export default function ReceptionSection({
 
         <div className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-
-            {/* Fila 1: Fecha y Proveedor */}
             <Input
               label="Fecha de Recepción"
               type="date"
@@ -113,8 +104,6 @@ export default function ReceptionSection({
               }))}
             />
 
-            {/* Fila 2: Siniestro y Tipo de Documento */}
-
             <div className="grid grid-cols-2 gap-4">
               <Input
                 label="N° de Siniestro"
@@ -122,7 +111,6 @@ export default function ReceptionSection({
                 onChange={(e) => setData({ ...data, n_claim: e.target.value })}
                 disabled={isReadOnly}
               />
-              
               <Select
                 label="Tipo (Fact / Prof)"
                 value={data.type}
@@ -135,7 +123,6 @@ export default function ReceptionSection({
               />
             </div>
 
-            {/* Fila 3: Factura y Control */}
             <div className="grid grid-cols-2 gap-4">
               <Input
                 label="N° de Factura"
@@ -151,7 +138,6 @@ export default function ReceptionSection({
               />
             </div>
 
-            {/* Fila 4: Moneda y Monto */}
             <Select
               label="Moneda"
               value={data.currency_type}
@@ -164,9 +150,7 @@ export default function ReceptionSection({
             />
 
             <div className="relative">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Monto Total Facturado
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Monto Total Facturado</label>
               <div className="relative flex items-center">
                 <input
                   type="text"
@@ -187,7 +171,6 @@ export default function ReceptionSection({
               </div>
             </div>
 
-            {/* Sección de Analista (Destacada) */}
             <div className="md:col-span-2 bg-slate-50 border border-slate-100 rounded-lg p-4 flex items-center justify-between">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-tight mb-1">
@@ -208,16 +191,15 @@ export default function ReceptionSection({
         </div>
       </div>
 
-      {/* Botón de Acción */}
       <div className="flex justify-end pt-2">
         <Button
           type="submit"
-          disabled={loading || isReadOnly || !isFormValid()}
-          className={`min-w-[200px] py-2.5 rounded-lg shadow-sm font-bold transition-all active:scale-95 ${
-            isReadOnly
-              ? 'bg-slate-100 text-slate-400 border border-slate-200'
-              : 'hover:shadow-md'
-          }`}
+          disabled={isDisabled}
+          className={`min-w-[200px] py-2.5 rounded-lg shadow-sm font-bold transition-all active:scale-95
+            ${isDisabled
+              ? 'bg-[#7EB2F8] text-white border-0 cursor-not-allowed'
+              : 'hover:shadow-md bg-[#1a56ff] hover:bg-[#0044ff] text-white'
+            }`}
         >
           {isReadOnly ? (
             <span className="flex items-center justify-center gap-2">

@@ -21,6 +21,7 @@ export default function FinishSection({
 
   const isReadOnly = !canEdit;
   const isDevuelto = billState === 'devuelto';
+  const isDisabled = loading || isReadOnly;
 
   const getFiniquitadorName = () => {
     if (!currentBill?.analyst_settlement) return 'No asignado';
@@ -36,13 +37,9 @@ export default function FinishSection({
 
   return (
     <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSave(data); // ✅ FIX
-      }}
+      onSubmit={(e) => { e.preventDefault(); onSave(data); }}
       className="space-y-6"
     >
-      {/* Banner de Modo Lectura */}
       {isReadOnly && !isDevuelto && (
         <div className="bg-amber-50 border-l-4 border-amber-400 p-4 shadow-sm rounded-r-lg flex items-center">
           <div className="ml-3">
@@ -53,9 +50,7 @@ export default function FinishSection({
         </div>
       )}
 
-      {/* Contenedor Principal */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        {/* Cabecera */}
         <div className="border-b border-slate-100 bg-white px-6 py-4">
           <h3 className="text-[13px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
             <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -66,7 +61,6 @@ export default function FinishSection({
         </div>
 
         <div className="p-8 space-y-7">
-          {/* Fila: Fecha y Analista */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">Fecha de Envío</label>
@@ -81,21 +75,17 @@ export default function FinishSection({
               <label className="block text-sm font-bold text-slate-700 mb-1">Analista Finiquito</label>
               <div className="flex items-center gap-2 w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg">
                 <div className="w-2.5 h-2.5 rounded-full bg-teal-500"></div>
-                <span className="text-sm font-bold text-slate-700">
-                  {getFiniquitadorName()}
-                </span>
+                <span className="text-sm font-bold text-slate-700">{getFiniquitadorName()}</span>
               </div>
             </div>
           </div>
 
-          {/* Nota informativa */}
           <div className="bg-slate-50 border border-slate-100 rounded-lg p-5">
             <p className="text-[11px] text-slate-400 italic text-center leading-tight">
               La fecha y el analista se asignan automáticamente al usuario que guarda el finiquito.
             </p>
           </div>
 
-          {/* Mensaje de finalización */}
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-6">
             <div className="flex items-start gap-3">
               <svg className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,13 +103,15 @@ export default function FinishSection({
         </div>
       </div>
 
-      {/* Botón de Acción */}
       <div className="flex justify-end pt-2">
-        <Button 
-          type="submit" 
-          disabled={loading || isReadOnly}
+        <Button
+          type="submit"
+          disabled={isDisabled}
           className={`min-w-[220px] py-3 rounded-lg shadow-sm font-bold transition-all
-            ${isReadOnly ? 'bg-slate-100 text-slate-400 border border-slate-200' : 'bg-[#1a56ff] hover:bg-[#0044ff] text-white'}`}
+            ${isDisabled
+              ? 'bg-[#7EB2F8] text-white border-0 cursor-not-allowed'
+              : 'bg-[#1a56ff] hover:bg-[#0044ff] text-white'
+            }`}
         >
           {isReadOnly ? (
             <span className="flex items-center gap-2">

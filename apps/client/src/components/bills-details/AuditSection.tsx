@@ -33,6 +33,7 @@ export default function AuditSection({
 
   const isReadOnly = !canEdit;
   const isDevuelto = billState === 'devuelto';
+  const isDisabled = loading || isReadOnly;
 
   const getAuditorName = () => {
     if (!currentBill?.auditor) return 'No asignado';
@@ -48,24 +49,15 @@ export default function AuditSection({
 
   return (
     <>
-      <Modal 
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        message={modalMessage}
-        type={modalType}
-      />
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} message={modalMessage} type={modalType} />
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (isReadOnly) {
-            showModal('No tienes permisos para guardar cambios en esta sección', 'warning');
-            return;
-          }
-          onSave(data); // ✅ FIX
+          if (isReadOnly) { showModal('No tienes permisos para guardar cambios en esta sección', 'warning'); return; }
+          onSave(data);
         }}
         className="space-y-6"
       >
-        {/* Banner de Modo Lectura */}
         {isReadOnly && !isDevuelto && (
           <div className="bg-amber-50 border-l-4 border-amber-400 p-4 shadow-sm rounded-r-lg flex items-center">
             <div className="ml-3">
@@ -76,9 +68,7 @@ export default function AuditSection({
           </div>
         )}
 
-        {/* Contenedor Principal */}
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          {/* Cabecera */}
           <div className="border-b border-slate-100 bg-white px-6 py-4">
             <h3 className="text-[13px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
               <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,7 +79,6 @@ export default function AuditSection({
           </div>
 
           <div className="p-8 space-y-7">
-            {/* Fila: Fecha y Auditor */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Fecha de Auditoría</label>
@@ -104,14 +93,11 @@ export default function AuditSection({
                 <label className="block text-sm font-bold text-slate-700 mb-1">Auditor</label>
                 <div className="flex items-center gap-2 w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg">
                   <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
-                  <span className="text-sm font-bold text-slate-700">
-                    {getAuditorName()}
-                  </span>
+                  <span className="text-sm font-bold text-slate-700">{getAuditorName()}</span>
                 </div>
               </div>
             </div>
 
-            {/* Nota informativa */}
             <div className="bg-slate-50 border border-slate-100 rounded-lg p-5">
               <p className="text-[11px] text-slate-400 italic text-center leading-tight">
                 La fecha y el auditor se asignan automáticamente al usuario que guarda la auditoría.
@@ -120,13 +106,15 @@ export default function AuditSection({
           </div>
         </div>
 
-        {/* Botón de Acción */}
         <div className="flex justify-end pt-2">
-          <Button 
-            type="submit" 
-            disabled={loading || isReadOnly}
+          <Button
+            type="submit"
+            disabled={isDisabled}
             className={`min-w-[220px] py-3 rounded-lg shadow-sm font-bold transition-all
-              ${isReadOnly ? 'bg-slate-100 text-slate-400 border border-slate-200' : 'bg-[#1a56ff] hover:bg-[#0044ff] text-white'}`}
+              ${isDisabled
+                ? 'bg-[#7EB2F8] text-white border-0 cursor-not-allowed'
+                : 'bg-[#1a56ff] hover:bg-[#0044ff] text-white'
+              }`}
           >
             {isReadOnly ? (
               <span className="flex items-center gap-2">

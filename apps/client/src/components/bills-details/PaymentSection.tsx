@@ -358,7 +358,7 @@ export default function PaymentSection({
             disabled={isDisabled}
             className={`min-w-[220px] py-3 rounded-lg shadow-sm font-bold transition-all
               ${isDisabled
-                ? 'bg-[#a5b4fc] text-white border-0 cursor-not-allowed'
+                ? 'bg-[#7EB2F8] text-white border-0 cursor-not-allowed'
                 : 'bg-[#1a56ff] hover:bg-[#0044ff] text-white'
               }`}
           >

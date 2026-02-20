@@ -55,14 +55,14 @@ export default function LiquidationSection({
     return analyst?.full_name || analyst?.name || 'Desconocido';
   }, [allUsers, data.analyst_liquidador, currentBill?.analyst_severance]);
 
-  // Moneda heredada de recepción
   const currencyLabel = currentBill?.currency_type || data.currency_type || '';
 
   if (!billExists) return null;
 
+  const isDisabled = loading || !canEdit || !data.tipo_siniestro;
+
   return (
     <div className="space-y-6">
-      {/* BARRA SUPERIOR DE ESTADO */}
       <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg flex justify-between text-[10px] text-slate-500 font-bold uppercase tracking-wider">
         <span>
           Acceso: <span className="text-slate-800">{userRole || 'ADMIN'}</span>
@@ -72,9 +72,7 @@ export default function LiquidationSection({
         </span>
       </div>
 
-      {/* CARD PRINCIPAL */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-
         <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -86,15 +84,8 @@ export default function LiquidationSection({
         </div>
 
         <div className="p-6 space-y-6">
-
-          {/* Fila 1: Fecha y Tipo de Siniestro */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-            <Input
-              label="Fecha de Liquidación"
-              value={data.fecha_liquidacion}
-              disabled
-              readOnly
-            />
+            <Input label="Fecha de Liquidación" value={data.fecha_liquidacion} disabled readOnly />
             <Select
               label="Tipo de Siniestro *"
               value={data.tipo_siniestro}
@@ -106,14 +97,9 @@ export default function LiquidationSection({
             />
           </div>
 
-          {/* Fila 2: Monto Facturado, Monto AMP, GNA */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
-
-            {/* Monto Facturado — con indicador de moneda */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Monto Facturado *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Monto Facturado *</label>
               <div className="relative flex items-center">
                 <input
                   type="text"
@@ -130,11 +116,8 @@ export default function LiquidationSection({
               </div>
             </div>
 
-            {/* Monto AMP */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Monto AMP (GNA + HM + SC)
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Monto AMP (GNA + HM + SC)</label>
               <div
                 className={`w-full px-4 py-2.5 rounded-lg border font-bold transition-all
                   ${montosCoinciden
@@ -150,49 +133,37 @@ export default function LiquidationSection({
               label="GNA"
               type="number"
               value={data.gna}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleInputChange('gna', e.target.value)
-              }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('gna', e.target.value)}
               disabled={!canEdit}
             />
           </div>
 
-          {/* Fila 3: Honorarios, Servicios Clínicos, Retención */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
             <Input
               label="Honorarios Médicos"
               type="number"
               value={data.honorarios_medic}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleInputChange('honorarios_medic', e.target.value)
-              }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('honorarios_medic', e.target.value)}
               disabled={!canEdit}
             />
             <Input
               label="Servicios Clínicos"
               type="number"
               value={data.servicios_clinicos}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleInputChange('servicios_clinicos', e.target.value)
-              }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('servicios_clinicos', e.target.value)}
               disabled={!canEdit}
             />
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">
-                Retención 5% (Calculada)
-              </label>
+              <label className="block text-sm font-medium text-slate-400 mb-1">Retención 5% (Calculada)</label>
               <div className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-lg text-slate-500">
                 {retencion.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
               </div>
             </div>
           </div>
 
-          {/* Fila 4: Monto Indemnizado y Nomenclatura de Lote */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Monto Indemnizado
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Monto Indemnizado</label>
               <div
                 className={`w-full px-4 py-2.5 rounded-lg border font-bold transition-all
                   ${montoIndemniz > 0
@@ -216,7 +187,6 @@ export default function LiquidationSection({
             />
           </div>
 
-          {/* Analista Liquidador */}
           <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 flex items-center justify-between">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-tight mb-1">
@@ -233,15 +203,18 @@ export default function LiquidationSection({
               Se registrará automáticamente al guardar la liquidación.
             </p>
           </div>
-
         </div>
       </div>
 
       <div className="flex justify-end pt-2">
         <Button
           onClick={() => onSave(data)}
-          disabled={loading || !canEdit || !data.tipo_siniestro}
-          className="min-w-[200px] py-2.5 rounded-lg shadow-sm font-bold transition-all active:scale-95 hover:shadow-md"
+          disabled={isDisabled}
+          className={`min-w-[200px] py-2.5 rounded-lg shadow-sm font-bold transition-all active:scale-95
+            ${isDisabled
+              ? 'bg-[#7EB2F8] text-white border-0 cursor-not-allowed'
+              : 'hover:shadow-md bg-[#1a56ff] hover:bg-[#0044ff] text-white'
+            }`}
         >
           {loading ? 'Guardando...' : 'Guardar Liquidación'}
         </Button>
