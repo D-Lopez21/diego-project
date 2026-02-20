@@ -389,7 +389,7 @@ export default function BillsDetailsPage({
   // ── Título dinámico según rol ──────────────────────────────────────────────
   const isProveedor = currentUserRole === 'proveedor';
   const pageTitle = isProveedor
-    ? 'Ver Factura'
+    ? 'Factura'
     : billExists ? 'Editar Factura' : 'Nueva Factura';
 
   return (

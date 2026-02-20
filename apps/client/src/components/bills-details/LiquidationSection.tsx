@@ -22,7 +22,6 @@ export default function LiquidationSection({
 }: any) {
   const [modalOpen, setModalOpen] = React.useState(false);
 
-  // --- LÓGICA DE INPUTS ---
   const handleInputChange = (fieldName: string, value: string) => {
     let cleanValue = value;
     if ((data[fieldName] === '0' || data[fieldName] === 0) && value.length > 1) {
@@ -31,7 +30,6 @@ export default function LiquidationSection({
     setData({ ...data, [fieldName]: cleanValue });
   };
 
-  // --- CÁLCULOS ---
   const montoFactNum = parseFloat(data.monto_fact) || 0;
   const gna = parseFloat(data.gna) || 0;
   const honorarios = parseFloat(data.honorarios_medic) || 0;
@@ -47,7 +45,6 @@ export default function LiquidationSection({
     }
   }, [montoAmp, montoIndemniz]);
 
-  // ✅ Se mantiene solo como referencia visual, ya no bloquea el guardado
   const montosCoinciden = Math.abs(montoAmp - montoFactNum) < 0.01;
 
   const getLiquidadorName = React.useCallback(() => {
@@ -57,6 +54,9 @@ export default function LiquidationSection({
     const analyst = allUsers.find((u: any) => u.id === analystId);
     return analyst?.full_name || analyst?.name || 'Desconocido';
   }, [allUsers, data.analyst_liquidador, currentBill?.analyst_severance]);
+
+  // Moneda heredada de recepción
+  const currencyLabel = currentBill?.currency_type || data.currency_type || '';
 
   if (!billExists) return null;
 
@@ -75,7 +75,6 @@ export default function LiquidationSection({
       {/* CARD PRINCIPAL */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
 
-        {/* Header de la card */}
         <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -86,7 +85,6 @@ export default function LiquidationSection({
           </h3>
         </div>
 
-        {/* Cuerpo de la card */}
         <div className="p-6 space-y-6">
 
           {/* Fila 1: Fecha y Tipo de Siniestro */}
@@ -110,15 +108,30 @@ export default function LiquidationSection({
 
           {/* Fila 2: Monto Facturado, Monto AMP, GNA */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
-            <Input
-              label="Monto Facturado *"
-              value={data.monto_fact}
-              disabled
-              readOnly
-            />
 
-            {/* Monto AMP — solo indicador visual, ya no bloquea */}
-            <div className="space-y-1">
+            {/* Monto Facturado — con indicador de moneda */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Monto Facturado *
+              </label>
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  value={data.monto_fact}
+                  readOnly
+                  disabled
+                  className="w-full px-4 py-2.5 pr-14 bg-slate-50 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed outline-none"
+                />
+                {currencyLabel && (
+                  <span className="absolute right-3 text-xs font-bold text-slate-400 uppercase pointer-events-none">
+                    {currencyLabel}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Monto AMP */}
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Monto AMP (GNA + HM + SC)
               </label>
@@ -164,9 +177,7 @@ export default function LiquidationSection({
               }
               disabled={!canEdit}
             />
-
-            {/* Retención (solo lectura, tono apagado) */}
-            <div className="space-y-1">
+            <div>
               <label className="block text-sm font-medium text-slate-400 mb-1">
                 Retención 5% (Calculada)
               </label>
@@ -178,7 +189,7 @@ export default function LiquidationSection({
 
           {/* Fila 4: Monto Indemnizado y Nomenclatura de Lote */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-            <div className="space-y-1">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Monto Indemnizado
               </label>
@@ -205,7 +216,7 @@ export default function LiquidationSection({
             />
           </div>
 
-          {/* Sección Analista Liquidador */}
+          {/* Analista Liquidador */}
           <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 flex items-center justify-between">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-tight mb-1">
