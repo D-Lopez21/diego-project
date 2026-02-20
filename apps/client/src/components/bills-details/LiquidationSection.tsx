@@ -226,7 +226,6 @@ export default function LiquidationSection({
         </div>
       </div>
 
-      {/* BOTÓN DE GUARDAR — ✅ se eliminó !montosCoinciden de disabled */}
       <div className="flex justify-end pt-2">
         <Button
           onClick={() => onSave(data)}

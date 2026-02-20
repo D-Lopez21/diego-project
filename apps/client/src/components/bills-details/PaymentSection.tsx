@@ -319,7 +319,7 @@ export default function PaymentSection({
             disabled={loading || isReadOnly || !isFormValid()}
             className={`min-w-[220px] py-3 rounded-lg shadow-sm font-bold transition-all
               ${(isReadOnly || !isFormValid())
-                ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                ? 'bg-slate-100 text-slate-400 border border-slate-200'
                 : 'bg-[#1a56ff] hover:bg-[#0044ff] text-white'}`}
           >
             {isReadOnly ? 'MODO LECTURA' : 'Guardar Ejecución'}
