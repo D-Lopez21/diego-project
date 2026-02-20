@@ -85,7 +85,6 @@ export default function PaymentSection({
     setData((prev: any) => ({ ...prev, ref_en_dolares: clean, monto_bs: monto }));
   };
 
-  // Al hacer focus: si el valor es '0' o vacío, limpia el campo
   const onFocusMonto = () => {
     const val = String(data.monto_bs || '');
     setLocalMonto(val === '0' || val === '' ? '' : val);
@@ -115,7 +114,6 @@ export default function PaymentSection({
     setLocalRef(null);
   };
 
-  // Muestra '0' visualmente cuando no hay valor, pero sin guardarlo en el estado
   const montoDisplay = localMonto !== null ? localMonto : (String(data.monto_bs || '') || '0');
   const tcrDisplay   = localTcr   !== null ? localTcr   : (String(data.tcr   || '') || '0');
   const refDisplay   = localRef   !== null ? localRef   : (String(data.ref_en_dolares || '') || '0');
@@ -158,7 +156,6 @@ export default function PaymentSection({
         : 'bg-white border-slate-200 focus:ring-2 focus:ring-blue-500 text-slate-800'
     }`;
 
-  // Chip de fórmula que aparece junto al label
   const FormulaChip = ({ formula }: { formula: string }) => (
     <span className="ml-2 text-[11px] font-normal font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
       {formula}
@@ -209,12 +206,31 @@ export default function PaymentSection({
           </div>
 
           <div className="p-8 space-y-7">
+
+            {/* Fecha de Pago + Monto Indemnizado */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Fecha de Pago</label>
                 <input
                   type="text"
                   value={getFechaPago()}
+                  readOnly
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed outline-none"
+                />
+              </div>
+
+              {/* ── MONTO INDEMNIZADO (solo lectura, viene de liquidación) ── */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Monto Indemnizado</label>
+                <input
+                  type="text"
+                  value={
+                    currentBill?.indemnizable_rate != null
+                      ? Number(currentBill.indemnizable_rate).toLocaleString('es-VE', {
+                          minimumFractionDigits: 2,
+                        })
+                      : '0,00'
+                  }
                   readOnly
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed outline-none"
                 />
