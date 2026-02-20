@@ -31,41 +31,42 @@ export default function UserProfileCard() {
   const roleInfo = roleLabels[role] ?? { label: role, color: 'bg-slate-100 text-slate-600 ring-slate-200' };
 
   return (
-    <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
-      {/* Header con gradiente y avatar centrado */}
-      <div className="bg-gradient-to-br from-blue-500 to-cyan-400 px-6 pt-6 pb-10 relative">
-        <div className="absolute inset-0 opacity-20"
+    <div className="rounded-2xl bg-white border border-slate-200 shadow-sm">
+      {/* Header con gradiente — sin overflow-hidden aquí */}
+      <div className="rounded-t-2xl bg-gradient-to-br from-blue-500 to-cyan-400 px-6 py-6 relative overflow-hidden">
+        {/* Patrón decorativo */}
+        <div
+          className="absolute inset-0 opacity-20"
           style={{
-            backgroundImage: `radial-gradient(circle at 20% 50%, white 1px, transparent 1px),
-                              radial-gradient(circle at 80% 20%, white 1px, transparent 1px)`,
-            backgroundSize: '30px 30px'
+            backgroundImage: `radial-gradient(circle, white 1px, transparent 1px)`,
+            backgroundSize: '20px 20px',
           }}
         />
-        {/* Avatar centrado dentro del header */}
+        {/* Avatar */}
         <div className="relative z-10 flex justify-center">
-          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold text-2xl shadow-lg ring-4 ring-white/30 select-none">
+          <div className="w-16 h-16 rounded-2xl bg-white/25 flex items-center justify-center text-white font-bold text-2xl shadow-md ring-4 ring-white/40 select-none">
             {initials}
           </div>
         </div>
       </div>
 
-      {/* Contenido debajo del header */}
-      <div className="px-6 pb-6 -mt-5">
-        {/* Badge de rol centrado, flotando entre header y contenido */}
-        <div className="flex justify-center mb-4">
-          <span className={`text-xs font-semibold px-3 py-1 rounded-full ring-1 bg-white shadow-sm ${roleInfo.color}`}>
+      {/* Cuerpo */}
+      <div className="px-6 pt-4 pb-6">
+        {/* Badge de rol */}
+        <div className="flex justify-center mb-3">
+          <span className={`text-xs font-semibold px-3 py-1 rounded-full ring-1 ${roleInfo.color}`}>
             {roleInfo.label}
           </span>
         </div>
 
-        {/* Info */}
-        <div className="text-center space-y-1 mb-5">
+        {/* Nombre y email */}
+        <div className="text-center mb-5">
           <h2 className="font-bold text-slate-800 text-lg leading-tight">{name}</h2>
-          <p className="text-sm text-slate-400 truncate">{email}</p>
+          <p className="text-sm text-slate-400 mt-0.5 truncate">{email}</p>
         </div>
 
         {/* Divider */}
-        <div className="h-px bg-slate-100 mb-5" />
+        <div className="h-px bg-slate-100 mb-4" />
 
         {/* Botón */}
         <button
