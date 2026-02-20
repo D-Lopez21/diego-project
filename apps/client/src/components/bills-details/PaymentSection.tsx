@@ -31,20 +31,25 @@ export default function PaymentSection({
   };
 
   const cleanNumeric = (value: string): string => {
-    let clean = value.replace(/[^0-9.]/g, '');
+    let clean = String(value || '').replace(/[^0-9.]/g, '');
     const parts = clean.split('.');
     if (parts.length > 2) clean = parts[0] + '.' + parts.slice(1).join('');
     clean = clean.replace(/^0+(\d)/, '$1');
     return clean;
   };
 
-  // --- Lógica de Validación ---
+  // --- Lógica de Validación Blindada ---
   const isFormValid = () => {
-    // Permitimos "0" o cualquier número, pero no strings vacíos
-    const tieneMonto = data.monto_bs !== '' && data.monto_bs !== null;
-    const tieneTcr = data.tcr !== '' && data.tcr !== null;
-    const tieneRefDolar = data.ref_en_dolares !== '' && data.ref_en_dolares !== null;
-    const tieneReferencia = data.ref_bancaria?.trim().length > 0;
+    // Convertimos a String antes de validar para evitar el error .trim()
+    const montoStr = String(data.monto_bs || '');
+    const tcrStr = String(data.tcr || '');
+    const refDolarStr = String(data.ref_en_dolares || '');
+    const refBancariaStr = String(data.ref_bancaria || '');
+
+    const tieneMonto = montoStr.length > 0;
+    const tieneTcr = tcrStr.length > 0;
+    const tieneRefDolar = refDolarStr.length > 0;
+    const tieneReferencia = refBancariaStr.trim().length > 0;
 
     return tieneMonto && tieneTcr && tieneRefDolar && tieneReferencia;
   };
@@ -89,9 +94,9 @@ export default function PaymentSection({
     setData((prev: any) => ({ ...prev, ref_en_dolares: clean, monto_bs: monto }));
   };
 
-  const onFocusMonto = () => setLocalMonto(data.monto_bs === '0' ? '' : (data.monto_bs || ''));
-  const onFocusTcr = () => setLocalTcr(data.tcr === '0' ? '' : (data.tcr || ''));
-  const onFocusRef = () => setLocalRef(data.ref_en_dolares === '0' ? '' : (data.ref_en_dolares || ''));
+  const onFocusMonto = () => setLocalMonto(String(data.monto_bs) === '0' ? '' : (String(data.monto_bs) || ''));
+  const onFocusTcr = () => setLocalTcr(String(data.tcr) === '0' ? '' : (String(data.tcr) || ''));
+  const onFocusRef = () => setLocalRef(String(data.ref_en_dolares) === '0' ? '' : (String(data.ref_en_dolares) || ''));
 
   const onBlurMonto = () => {
     const val = localMonto ?? data.monto_bs;
@@ -161,10 +166,7 @@ export default function PaymentSection({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (isReadOnly) {
-            showModal('No tienes permisos para guardar cambios en esta sección', 'warning');
-            return;
-          }
+          if (isReadOnly) return;
           if (!isFormValid()) {
             showModal('Por favor, complete todos los campos obligatorios.', 'error');
             return;
@@ -173,12 +175,13 @@ export default function PaymentSection({
         }}
         className="space-y-6"
       >
+
         {isReadOnly && !isDevuelto && (
           <div className="bg-amber-50 border-l-4 border-amber-400 p-4 shadow-sm rounded-r-lg flex items-center">
             <div className="ml-3">
               <p className="text-sm text-amber-800">
-                Usted está en modo <span className="font-bold">Vista Previa</span>. Su rol actual (
-                <span className="font-mono bg-amber-100 px-1 rounded">{userRole}</span>) no permite editar esta sección.
+                Usted está en modo <span className="font-bold">Vista Previa</span>. 
+                Su rol actual (<span className="font-mono bg-amber-100 px-1 rounded">{userRole}</span>) no permite editar esta sección.
               </p>
             </div>
           </div>
@@ -196,7 +199,6 @@ export default function PaymentSection({
           </div>
 
           <div className="p-8 space-y-7">
-            {/* Fecha */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Fecha de Pago</label>
@@ -209,17 +211,15 @@ export default function PaymentSection({
               </div>
             </div>
 
-            {/* Montos */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Monto Bs <span className="text-red-500">*</span> <span className="text-xs text-slate-400 font-normal">(Ref. $ × TCR)</span>
+                  Monto Bs <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   inputMode="decimal"
                   value={montoDisplay}
-                  placeholder="0"
                   onChange={(e) => handleMontoChange(e.target.value)}
                   onFocus={onFocusMonto}
                   onBlur={onBlurMonto}
@@ -236,7 +236,6 @@ export default function PaymentSection({
                   type="text"
                   inputMode="decimal"
                   value={tcrDisplay}
-                  placeholder="0"
                   onChange={(e) => handleTcrChange(e.target.value)}
                   onFocus={onFocusTcr}
                   onBlur={onBlurTcr}
@@ -247,13 +246,12 @@ export default function PaymentSection({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ref. en Dólares <span className="text-red-500">*</span> <span className="text-xs text-slate-400 font-normal">(Monto Bs ÷ TCR)</span>
+                  Ref. en Dólares <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   inputMode="decimal"
                   value={refDisplay}
-                  placeholder="0"
                   onChange={(e) => handleRefChange(e.target.value)}
                   onFocus={onFocusRef}
                   onBlur={onBlurRef}
@@ -263,7 +261,6 @@ export default function PaymentSection({
               </div>
             </div>
 
-            {/* Referencias y Diferencias */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -274,7 +271,7 @@ export default function PaymentSection({
                   value={data.ref_bancaria || ''}
                   onChange={(e) => setData((prev: any) => ({ ...prev, ref_bancaria: e.target.value }))}
                   disabled={isReadOnly}
-                  placeholder="Escriba la referencia"
+                  placeholder="Referencia"
                   className={inputClass(isReadOnly)}
                 />
               </div>
@@ -283,9 +280,7 @@ export default function PaymentSection({
                 <label className="block text-sm font-medium text-gray-700 mb-1">Diferencia Vértice</label>
                 <input
                   type="text"
-                  inputMode="decimal"
                   value={data.diferencia_vertice || ''}
-                  placeholder="0"
                   onChange={(e) => setData((prev: any) => ({ ...prev, diferencia_vertice: cleanNumeric(e.target.value) }))}
                   disabled={isReadOnly}
                   className={inputClass(isReadOnly)}
@@ -296,9 +291,7 @@ export default function PaymentSection({
                 <label className="block text-sm font-medium text-gray-700 mb-1">Diferencia Proveedor</label>
                 <input
                   type="text"
-                  inputMode="decimal"
                   value={data.diferencia_proveedor || ''}
-                  placeholder="0"
                   onChange={(e) => setData((prev: any) => ({ ...prev, diferencia_proveedor: cleanNumeric(e.target.value) }))}
                   disabled={isReadOnly}
                   className={inputClass(isReadOnly)}
@@ -316,9 +309,6 @@ export default function PaymentSection({
                   <span className="text-sm font-bold text-slate-700">{getPagadorName()}</span>
                 </div>
               </div>
-              <p className="text-[11px] text-slate-400 italic text-right leading-tight max-w-[180px]">
-                Se asigna automáticamente al usuario que guarda la ejecución.
-              </p>
             </div>
           </div>
         </div>
@@ -332,15 +322,7 @@ export default function PaymentSection({
                 ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                 : 'bg-[#1a56ff] hover:bg-[#0044ff] text-white'}`}
           >
-            {isReadOnly ? (
-              <span className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                MODO LECTURA
-              </span>
-            ) : 'Guardar Ejecución'}
+            {isReadOnly ? 'MODO LECTURA' : 'Guardar Ejecución'}
           </Button>
         </div>
       </form>

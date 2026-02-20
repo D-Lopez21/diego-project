@@ -120,7 +120,7 @@ export default function LiquidationSection({
             {/* Monto AMP — solo indicador visual, ya no bloquea */}
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Monto AMP (Auto)
+                Monto AMP (GNA + HM + SC)
               </label>
               <div
                 className={`w-full px-4 py-2.5 rounded-lg border font-bold transition-all
