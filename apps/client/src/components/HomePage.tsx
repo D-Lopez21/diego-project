@@ -40,30 +40,32 @@ const ActionCard = ({
   const styles = colorStyles[color];
 
   return (
-    <div className={`group bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg ${styles.hover} transition-all duration-300 flex flex-col justify-between hover:-translate-y-1 relative overflow-hidden h-full`}>
+    <div className={`group bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg ${styles.hover} transition-all duration-300 flex flex-col hover:-translate-y-1 relative overflow-hidden h-full`}>
       {/* Decorative gradient corner */}
       <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${styles.accent} opacity-5 rounded-bl-full transition-opacity duration-300 group-hover:opacity-10`} />
-      
-      <div className="relative z-10">
-        <div
-          className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 border ${styles.icon} transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-sm`}
-        >
-          <Icon className="w-7 h-7" />
-        </div>
-        <h3 className="text-xl font-bold text-slate-800 mb-2 group-hover:text-slate-900 transition-colors">
-          {title}
-        </h3>
-        <p className="text-sm text-slate-500 mb-6 leading-relaxed">
-          {description}
-        </p>
+
+      {/* Icono */}
+      <div className={`relative z-10 w-14 h-14 rounded-2xl flex items-center justify-center mb-4 border ${styles.icon} transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-sm`}>
+        <Icon className="w-7 h-7" />
       </div>
-      
-      <Button
-        onClick={onClick}
-        className={`w-full bg-gradient-to-r ${styles.accent} hover:opacity-90 text-white font-semibold py-3 rounded-xl shadow-md transition-all duration-300 relative z-10`}
-      >
-        Ver Tabla
-      </Button>
+
+      {/* Texto */}
+      <h3 className="relative z-10 text-xl font-bold text-slate-800 mb-2 group-hover:text-slate-900 transition-colors">
+        {title}
+      </h3>
+      <p className="relative z-10 text-sm text-slate-500 leading-relaxed mb-5">
+        {description}
+      </p>
+
+      {/* Botón al fondo usando mt-auto */}
+      <div className="mt-auto relative z-10">
+        <Button
+          onClick={onClick}
+          className={`w-full bg-gradient-to-r ${styles.accent} hover:opacity-90 text-white font-semibold py-3 rounded-xl shadow-md transition-all duration-300`}
+        >
+          Ver Tabla
+        </Button>
+      </div>
     </div>
   );
 };
@@ -84,17 +86,14 @@ export default function HomePage() {
       </div>
 
       <div className="max-w-7xl mx-auto relative">
-        {/* ✅ Grid principal con items-stretch para que todas las celdas tengan el mismo alto */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 items-stretch">
-          
-          {/* Perfil — ocupa 1 columna y se estira al alto del row */}
-          <div className="lg:col-span-1 animate-fade-in">
-            <div className="h-full">
-              <UserProfileCard />
-            </div>
+
+          {/* Perfil */}
+          <div className="lg:col-span-1 animate-fade-in h-full">
+            <UserProfileCard />
           </div>
 
-          {/* Grid de Acciones — ocupa 3 columnas */}
+          {/* Acciones */}
           <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch">
             {isAdmin ? (
               <>
