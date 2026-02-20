@@ -114,6 +114,7 @@ export default function ReceptionSection({
             />
 
             {/* Fila 2: Siniestro y Tipo de Documento */}
+
             <div className="grid grid-cols-2 gap-4">
               <Input
                 label="N° de Siniestro"
@@ -121,11 +122,16 @@ export default function ReceptionSection({
                 onChange={(e) => setData({ ...data, n_claim: e.target.value })}
                 disabled={isReadOnly}
               />
-              <Input
+              
+              <Select
                 label="Tipo (Fact / Prof)"
                 value={data.type}
                 onChange={(e) => setData({ ...data, type: e.target.value })}
                 disabled={isReadOnly}
+                options={[
+                  { label: 'DNF', value: 'DNF' },
+                  { label: 'FACTURA', value: 'FACTURA' },
+                ]}
               />
             </div>
 
