@@ -18,12 +18,10 @@ export default function PaymentSection({
   const [modalMessage, setModalMessage] = useState('');
   const [modalType, setModalType] = useState<'info' | 'error' | 'success' | 'warning'>('info');
 
-  // Estado local de los 3 campos mientras el usuario escribe
   const [localMonto, setLocalMonto] = useState<string | null>(null);
   const [localTcr, setLocalTcr] = useState<string | null>(null);
   const [localRef, setLocalRef] = useState<string | null>(null);
 
-  // Qué campo fue el último en editarse para decidir la dirección del cálculo
   const lastEdited = useRef<'monto_bs' | 'ref_en_dolares' | null>(null);
 
   const showModal = (message: string, type: 'info' | 'error' | 'success' | 'warning' = 'warning') => {
@@ -32,19 +30,26 @@ export default function PaymentSection({
     setModalOpen(true);
   };
 
-  // Solo permite dígitos y un punto decimal, sin ceros iniciales
   const cleanNumeric = (value: string): string => {
     let clean = value.replace(/[^0-9.]/g, '');
-    // Solo un punto decimal
     const parts = clean.split('.');
     if (parts.length > 2) clean = parts[0] + '.' + parts.slice(1).join('');
-    // Sin ceros iniciales salvo "0."
     clean = clean.replace(/^0+(\d)/, '$1');
     return clean;
   };
 
-  // ─── Handlers de cambio ───────────────────────────────────────────────────
+  // --- Lógica de Validación ---
+  const isFormValid = () => {
+    // Permitimos "0" o cualquier número, pero no strings vacíos
+    const tieneMonto = data.monto_bs !== '' && data.monto_bs !== null;
+    const tieneTcr = data.tcr !== '' && data.tcr !== null;
+    const tieneRefDolar = data.ref_en_dolares !== '' && data.ref_en_dolares !== null;
+    const tieneReferencia = data.ref_bancaria?.trim().length > 0;
 
+    return tieneMonto && tieneTcr && tieneRefDolar && tieneReferencia;
+  };
+
+  // --- Handlers de cambio ---
   const handleMontoChange = (raw: string) => {
     lastEdited.current = 'monto_bs';
     const clean = cleanNumeric(raw);
@@ -84,13 +89,9 @@ export default function PaymentSection({
     setData((prev: any) => ({ ...prev, ref_en_dolares: clean, monto_bs: monto }));
   };
 
-  // ─── Al hacer focus: muestra el valor real sin ceros (editable) ───────────
-
   const onFocusMonto = () => setLocalMonto(data.monto_bs === '0' ? '' : (data.monto_bs || ''));
   const onFocusTcr = () => setLocalTcr(data.tcr === '0' ? '' : (data.tcr || ''));
   const onFocusRef = () => setLocalRef(data.ref_en_dolares === '0' ? '' : (data.ref_en_dolares || ''));
-
-  // ─── Al perder focus: limpia el estado local y sincroniza con data ─────────
 
   const onBlurMonto = () => {
     const val = localMonto ?? data.monto_bs;
@@ -108,9 +109,6 @@ export default function PaymentSection({
     setLocalRef(null);
   };
 
-  // ─── Valores mostrados ────────────────────────────────────────────────────
-
-  // Mientras edita usa el estado local; si no, usa data
   const montoDisplay = localMonto !== null ? localMonto : (data.monto_bs || '');
   const tcrDisplay = localTcr !== null ? localTcr : (data.tcr || '');
   const refDisplay = localRef !== null ? localRef : (data.ref_en_dolares || '');
@@ -134,7 +132,7 @@ export default function PaymentSection({
 
   const getFechaPago = () => {
     if (!currentBill?.paid_date) return 'Pendiente';
-    const fechaLimpia = currentBill.paid_date.replace(/-/g, '\/');
+    const fechaLimpia = currentBill.paid_date.replace(/-/g, '/');
     return new Date(fechaLimpia).toLocaleDateString('es-ES');
   };
 
@@ -167,11 +165,14 @@ export default function PaymentSection({
             showModal('No tienes permisos para guardar cambios en esta sección', 'warning');
             return;
           }
+          if (!isFormValid()) {
+            showModal('Por favor, complete todos los campos obligatorios.', 'error');
+            return;
+          }
           onSave(getDataToSave());
         }}
         className="space-y-6"
       >
-        {/* Banner Modo Lectura */}
         {isReadOnly && !isDevuelto && (
           <div className="bg-amber-50 border-l-4 border-amber-400 p-4 shadow-sm rounded-r-lg flex items-center">
             <div className="ml-3">
@@ -183,7 +184,6 @@ export default function PaymentSection({
           </div>
         )}
 
-        {/* Contenedor Principal */}
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
           <div className="border-b border-slate-100 bg-white px-6 py-4">
             <h3 className="text-[13px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
@@ -196,7 +196,6 @@ export default function PaymentSection({
           </div>
 
           <div className="p-8 space-y-7">
-
             {/* Fecha */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
@@ -212,11 +211,9 @@ export default function PaymentSection({
 
             {/* Montos */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-              {/* Monto Bs */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Monto Bs <span className="text-xs text-slate-400 font-normal">(Ref. $ × TCR)</span>
+                  Monto Bs <span className="text-red-500">*</span> <span className="text-xs text-slate-400 font-normal">(Ref. $ × TCR)</span>
                 </label>
                 <input
                   type="text"
@@ -231,9 +228,10 @@ export default function PaymentSection({
                 />
               </div>
 
-              {/* TCR */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">TCR</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  TCR <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   inputMode="decimal"
@@ -247,10 +245,9 @@ export default function PaymentSection({
                 />
               </div>
 
-              {/* Ref. en Dólares */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ref. en Dólares <span className="text-xs text-slate-400 font-normal">(Monto Bs ÷ TCR)</span>
+                  Ref. en Dólares <span className="text-red-500">*</span> <span className="text-xs text-slate-400 font-normal">(Monto Bs ÷ TCR)</span>
                 </label>
                 <input
                   type="text"
@@ -268,14 +265,16 @@ export default function PaymentSection({
 
             {/* Referencias y Diferencias */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Referencia Bancaria</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Referencia Bancaria <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={data.ref_bancaria || ''}
                   onChange={(e) => setData((prev: any) => ({ ...prev, ref_bancaria: e.target.value }))}
                   disabled={isReadOnly}
+                  placeholder="Escriba la referencia"
                   className={inputClass(isReadOnly)}
                 />
               </div>
@@ -307,7 +306,6 @@ export default function PaymentSection({
               </div>
             </div>
 
-            {/* Analista */}
             <div className="bg-slate-50 border border-slate-100 rounded-lg p-5 flex justify-between items-center">
               <div>
                 <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-tight mb-1">
@@ -325,14 +323,13 @@ export default function PaymentSection({
           </div>
         </div>
 
-        {/* Botón */}
         <div className="flex justify-end pt-2">
           <Button
             type="submit"
-            disabled={loading || isReadOnly}
+            disabled={loading || isReadOnly || !isFormValid()}
             className={`min-w-[220px] py-3 rounded-lg shadow-sm font-bold transition-all
-              ${isReadOnly
-                ? 'bg-slate-100 text-slate-400 border border-slate-200'
+              ${(isReadOnly || !isFormValid())
+                ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                 : 'bg-[#1a56ff] hover:bg-[#0044ff] text-white'}`}
           >
             {isReadOnly ? (
