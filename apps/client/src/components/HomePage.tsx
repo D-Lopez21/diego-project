@@ -52,32 +52,36 @@ const ActionCard = ({
 
   return (
     <div className={`group bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl ${styles.hover} transition-all duration-300 flex flex-col hover:-translate-y-1 overflow-hidden h-full`}>
-      
-      {/* Header con gradiente suave */}
-      <div className={`relative p-6 pb-4`}>
-        {/* Icono con gradiente */}
-        <div className={`w-12 h-12 rounded-xl ${styles.iconBg} flex items-center justify-center shadow-md mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
-          <Icon className="w-6 h-6 text-white" />
+
+      {/* Header */}
+      <div className="p-4 pb-3 flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-xl flex-shrink-0 ${styles.iconBg} flex items-center justify-center shadow-md transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+          <Icon className="w-5 h-5 text-white" />
         </div>
-        <h3 className="text-lg font-bold text-slate-800 mb-1">{title}</h3>
-        <p className="text-sm text-slate-400 leading-relaxed">{description}</p>
+        <div>
+          <h3 className="text-base font-bold text-slate-800 leading-tight">{title}</h3>
+          <p className="text-xs text-slate-400 leading-snug mt-0.5">{description}</p>
+        </div>
       </div>
 
+      {/* Divider */}
+      <div className="h-px bg-slate-100 mx-4" />
+
       {/* Features */}
-      <div className={`mx-5 mb-5 rounded-xl ${styles.featureBg} border ${styles.border} p-4 flex flex-col gap-2`}>
+      <div className={`mx-4 my-3 rounded-xl ${styles.featureBg} border ${styles.border} px-3 py-2.5 flex flex-col gap-1.5`}>
         {features.map((f) => (
-          <div key={f} className="flex items-center gap-2.5">
+          <div key={f} className="flex items-center gap-2">
             <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${styles.dot}`} />
-            <span className="text-sm text-slate-600">{f}</span>
+            <span className="text-xs text-slate-600">{f}</span>
           </div>
         ))}
       </div>
 
       {/* Botón */}
-      <div className="px-5 pb-5 mt-auto">
+      <div className="px-4 pb-4 mt-auto">
         <Button
           onClick={onClick}
-          className={`w-full bg-gradient-to-r ${styles.accent} hover:opacity-90 text-white font-semibold py-2.5 rounded-xl shadow-md transition-all duration-300`}
+          className={`w-full bg-gradient-to-r ${styles.accent} hover:opacity-90 text-white font-semibold py-2 rounded-xl shadow-md transition-all duration-300 text-sm`}
         >
           Ver Tabla
         </Button>
@@ -101,18 +105,18 @@ export default function HomePage() {
       </div>
 
       <div className="max-w-7xl mx-auto relative">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 items-stretch">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 items-start">
 
-          {/* Perfil */}
-          <div className="lg:col-span-1 animate-fade-in h-full">
+          {/* Perfil — items-start para que NO se estire */}
+          <div className="lg:col-span-1 animate-fade-in">
             <UserProfileCard />
           </div>
 
           {/* Acciones */}
-          <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch">
+          <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {isAdmin ? (
               <>
-                <div className="animate-fade-in-up flex" style={{ animationDelay: '100ms' }}>
+                <div className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
                   <ActionCard
                     title="Usuarios"
                     description="Administra los roles y permisos del sistema."
@@ -126,7 +130,7 @@ export default function HomePage() {
                     ]}
                   />
                 </div>
-                <div className="animate-fade-in-up flex" style={{ animationDelay: '200ms' }}>
+                <div className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
                   <ActionCard
                     title="Proveedores"
                     description="Gestiona el directorio de proveedores."
@@ -142,7 +146,7 @@ export default function HomePage() {
                 </div>
               </>
             ) : null}
-            <div className="animate-fade-in-up flex" style={{ animationDelay: isAdmin ? '300ms' : '100ms' }}>
+            <div className="animate-fade-in-up" style={{ animationDelay: isAdmin ? '300ms' : '100ms' }}>
               <ActionCard
                 title="Facturas"
                 description="Controla el historial de facturación."
