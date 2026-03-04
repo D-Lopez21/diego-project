@@ -16,9 +16,9 @@ export default function LiquidationSection({
   loading,
   allUsers,
   canEdit,
-  userRole,
   billState,
   currentBill,
+  isProveedor,
 }: any) {
   const [modalOpen, setModalOpen] = React.useState(false);
 
@@ -67,26 +67,16 @@ export default function LiquidationSection({
     <div className="space-y-6">
 
       {/* Banner Modo Lectura */}
-      {isReadOnly && !isDevuelto && (
+      {isReadOnly && !isDevuelto && !isProveedor && (
         <div className="bg-amber-50 border-l-4 border-amber-400 p-4 shadow-sm rounded-r-lg flex items-center">
           <div className="ml-3">
             <p className="text-sm text-amber-800">
               Usted está en modo <span className="font-bold">Vista Previa</span>. 
-              Su rol actual (<span className="font-mono bg-amber-100 px-1 rounded">{userRole}</span>) no permite editar esta sección.
+              Solo puede editar esta sección el analista que la guardó originalmente o un usuario con rol <span className="font-mono bg-amber-100 px-1 rounded">admin</span>.
             </p>
           </div>
         </div>
       )}
-
-      {/* Barra de estado */}
-      <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg flex justify-between text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-        <span>
-          Acceso: <span className="text-slate-800">{userRole || 'ADMIN'}</span>
-        </span>
-        <span>
-          Estado Factura: <span className="text-blue-600">{billState || 'PENDIENTE'}</span>
-        </span>
-      </div>
 
       {/* Card principal */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">

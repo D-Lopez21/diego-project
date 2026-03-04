@@ -10,13 +10,15 @@ type FilterType = 'claim' | 'provider' | 'lot' | 'state_sequence';
 
 export default function BillingPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { bills, loading, error, getProviderName, deleteBill } = useGetAllBills();
   
   const [searchTerm, setSearchTerm] = React.useState('');
   const [filterType, setFilterType] = React.useState<FilterType>('claim');
 
-  const isProvider = user?.profile?.role === 'proveedor';
+  const roles = user?.profile?.roles ?? [];
+  const isProvider = roles.includes('proveedor');
+  const canCreateBill = !isProvider && (isAdmin || roles.includes('recepcion'));
 
   // Valores técnicos coinciden con lo que guardas en BillsDetailsPage
   const states = [
@@ -80,7 +82,13 @@ export default function BillingPage() {
         </div>
 
         {!isProvider && (
-          <Button icon={<PlusIcon className="size-5" />} onClick={() => navigate('create-bill')}>
+          <Button
+            icon={<PlusIcon className="size-5" />}
+            onClick={() => canCreateBill && navigate('create-bill')}
+            disabled={!canCreateBill}
+            className={!canCreateBill ? 'opacity-50 cursor-not-allowed' : undefined}
+            title={!canCreateBill ? 'Solo usuarios de Recepción o Admin pueden crear facturas' : undefined}
+          >
             Nueva Factura
           </Button>
         )}

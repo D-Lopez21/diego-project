@@ -29,7 +29,7 @@ export function useGetAllBills() {
       console.log('👤 Usuario actual:', {
         id: user.id,
         email: user.email,
-        role: user.profile?.role,
+        roles: user.profile?.roles,
         suppliers_id: user.profile?.suppliers_id,
         name: user.profile?.name
       });
@@ -47,14 +47,16 @@ export function useGetAllBills() {
         .from('bills')
         .select('*');
       
-      // ✅ CORRECCIÓN: Si es proveedor, filtrar por suppliers_id que coincida con user.profile.suppliers_id
-      // O si suppliers_id está vacío, usar directamente el user.id
-      if (user?.profile?.role === 'proveedor') {
-        const providerIdentifier = user.profile.suppliers_id || user.id;
+      const roles = user?.profile?.roles ?? [];
+      const isProveedor = roles.includes('proveedor');
+
+      // Si es proveedor, filtrar por suppliers_id vinculado
+      if (isProveedor && user) {
+        const providerIdentifier = user.profile?.suppliers_id || user.id;
         console.log('🔒 FILTRO APLICADO - Proveedor ID:', providerIdentifier);
         query = query.eq('suppliers_id', providerIdentifier);
       } else {
-        console.log('🔓 Sin filtro - Mostrando todas las facturas (Admin u otro rol)');
+        console.log('🔓 Sin filtro - Mostrando todas las facturas (admin u otros roles internos)');
       }
       
       query = query.order('arrival_date', { ascending: false });
@@ -66,7 +68,7 @@ export function useGetAllBills() {
       const result = data || [];
       
       console.log(`📦 Facturas obtenidas: ${result.length}`);
-      if (user?.profile?.role === 'proveedor') {
+      if (isProveedor) {
         console.log('📋 Facturas del proveedor:', result.map(b => ({
           n_billing: b.n_billing,
           suppliers_id: b.suppliers_id
@@ -94,9 +96,11 @@ export function useGetAllBills() {
           .from('bills')
           .select('*');
         
-        // ✅ CORRECCIÓN: Usar user.profile.suppliers_id o user.id
-        if (user?.profile?.role === 'proveedor') {
-          const providerIdentifier = user.profile.suppliers_id || user.id;
+        const roles = user?.profile?.roles ?? [];
+        const isProveedor = roles.includes('proveedor');
+
+        if (isProveedor && user) {
+          const providerIdentifier = user.profile?.suppliers_id || user.id;
           console.log('🔒 Aplicando filtro en carga inicial...');
           console.log('ID del proveedor:', providerIdentifier);
           billsQuery = billsQuery.eq('suppliers_id', providerIdentifier);
@@ -106,7 +110,10 @@ export function useGetAllBills() {
 
         const [bRes, pRes] = await Promise.all([
           billsQuery,
-          supabase.from('profile').select('*').eq('role', 'proveedor').eq('active', true)
+          supabase
+            .from('profile')
+            .select('id, name, rif, active, user_roles(roles(name))')
+            .eq('active', true),
         ]);
 
         if (bRes.error) throw bRes.error;
@@ -114,15 +121,34 @@ export function useGetAllBills() {
 
         if (isMounted) {
           cachedBills = bRes.data || [];
-          cachedProviders = pRes.data || [];
+
+          // Mapear perfiles a proveedores reales (rol 'proveedor')
+          const mappedProviders: Provider[] = (pRes.data || [])
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .map((row: any) => {
+              const roles: string[] =
+                row.user_roles?.map((ur: any) => ur.roles?.name).filter(Boolean) ?? [];
+
+              return {
+                id: row.id,
+                name: row.name,
+                rif: row.rif,
+                role: roles.includes('proveedor') ? 'proveedor' : '',
+                active: row.active,
+              };
+            })
+            .filter((p: Provider) => p.role === 'proveedor');
+
+          cachedProviders = mappedProviders;
+
           setBills(cachedBills);
           setProviders(cachedProviders);
           setError(null);
           
           console.log(`✅ Carga inicial completada: ${cachedBills.length} facturas`);
           
-          if (user?.profile?.role === 'proveedor') {
-            const providerIdentifier = user.profile.suppliers_id || user.id;
+          if (isProveedor && user) {
+            const providerIdentifier = user.profile?.suppliers_id || user.id;
             console.log('🔍 Comparación de IDs:');
             console.log('Mi ID de proveedor:', providerIdentifier);
             console.log('Facturas cargadas:', cachedBills.map(b => ({
@@ -149,9 +175,11 @@ export function useGetAllBills() {
 
     document.addEventListener('visibilitychange', handleVisibility);
 
-    // ✅ CORRECCIÓN: Usar el identificador correcto del proveedor
-    const providerIdentifier = user?.profile?.role === 'proveedor' 
-      ? (user.profile.suppliers_id || user.id)
+    const roles = user?.profile?.roles ?? [];
+    const isProveedor = roles.includes('proveedor');
+
+    const providerIdentifier = isProveedor
+      ? (user?.profile?.suppliers_id || user?.id)
       : null;
 
     const channelName = providerIdentifier

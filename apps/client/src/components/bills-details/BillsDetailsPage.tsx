@@ -15,6 +15,7 @@ import type {
 } from './interfaces';
 import { useGetAllUsers } from '../../hooks/useGetAllUsers';
 import { useGetAllProviders } from '../../hooks/useGetAllProviders';
+import { useAuth } from '../../hooks/useAuth';
 import FinishSection from './FinishSection';
 import PaymentSection from './PaymentSection';
 import ScheduleSection from './ScheduleSection';
@@ -36,9 +37,11 @@ export default function BillsDetailsPage({
   const [activeSection, setActiveSection] = React.useState<SectionId>('recepcion');
   const { providers } = useGetAllProviders();
   const { users: allUsers } = useGetAllUsers();
+  const { user, isAdmin } = useAuth();
 
-  const [currentUserRole, setCurrentUserRole] = React.useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
+  const roles = user?.profile?.roles ?? [];
+  const isProveedor = roles.includes('proveedor');
+  const currentUserId = user?.id ?? null;
   const [currentBill, setCurrentBill] = React.useState<Bill | null>(null);
   const [loading, setLoading] = React.useState(false);
 
@@ -106,30 +109,21 @@ export default function BillsDetailsPage({
     analyst_finiquito: '',
   });
 
-  // --- CARGA DE USUARIO Y PERMISOS ---
-  React.useEffect(() => {
-    const loadCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setCurrentUserId(user.id);
-        const { data: profile } = await supabase
-          .from('profile')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        if (profile) setCurrentUserRole(profile.role);
-      }
-    };
-    loadCurrentUser();
-  }, []);
-
   const canEditSection = (section: SectionId): boolean => {
-    if (!currentUserRole) return false;
+    if (!user) return false;
+    if (isProveedor) return false;
+
+    const isCreating = !billId || billId === 'create-bill';
+
+    // En facturas devueltas solo admin puede tocar PROGRAMACION
     if (currentBill?.state === 'devuelto') {
-      if (currentUserRole === 'admin' && section === 'programacion') return true;
+      if (isAdmin && section === 'programacion') return true;
       return false;
     }
-    if (currentUserRole === 'admin') return true;
+
+    // Admin puede editar siempre (salvo la regla anterior)
+    if (isAdmin) return true;
+
     const sectionRoleMap: Record<SectionId, string[]> = {
       recepcion: ['recepcion'],
       liquidacion: ['liquidacion'],
@@ -138,7 +132,37 @@ export default function BillsDetailsPage({
       ejecucion: ['pagos'],
       finiquito: ['finiquito'],
     };
-    return sectionRoleMap[section]?.includes(currentUserRole) || false;
+    const allowedRoles = sectionRoleMap[section] ?? [];
+    const hasRoleForSection = allowedRoles.some((r) => roles.includes(r));
+    if (!hasRoleForSection) return false;
+
+    // Regla de propiedad: solo quien guardó la sección puede editarla después
+    // (más admin, ya manejado arriba)
+    if (isCreating || !currentBill || !currentUserId) {
+      // En creación solo validamos rol; todavía no hay propietario.
+      return true;
+    }
+
+    const ownerFieldMap: Record<SectionId, keyof Bill | null> = {
+      recepcion: 'analyst_receptor_id',
+      liquidacion: 'analyst_severance',
+      auditoria: 'auditor',
+      programacion: 'analyst_schedule',
+      ejecucion: 'analyst_paid',
+      finiquito: 'analyst_settlement',
+    };
+
+    const ownerField = ownerFieldMap[section];
+    if (!ownerField) return false;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ownerId = (currentBill as any)[ownerField] as string | null | undefined;
+
+    // Si no hay aún propietario almacenado, permitimos editar a quien tiene el rol.
+    if (!ownerId) return true;
+
+    // Solo el dueño de la sección puede editarla posteriormente.
+    return ownerId === currentUserId;
   };
 
   const isPreviousSectionCompleted = (section: string): { valid: boolean; message: string } => {
@@ -264,13 +288,18 @@ export default function BillsDetailsPage({
         }
 
         // ─── Validación: n_billing único por proveedor ───────────────────────
-        const { data: duplicates, error: dupError } = await supabase
+        let dupQuery = supabase
           .from('bills')
           .select('id')
           .eq('n_billing', sectionData?.n_billing)
-          .eq('suppliers_id', sectionData?.suppliers_id)
-          .neq('id', billId ?? '')   // al editar, excluye la propia factura
-          .limit(1);
+          .eq('suppliers_id', sectionData?.suppliers_id);
+
+        // Al editar, excluimos la propia factura; en creación no aplicamos este filtro
+        if (!isCreating && billId) {
+          dupQuery = dupQuery.neq('id', billId);
+        }
+
+        const { data: duplicates, error: dupError } = await dupQuery.limit(1);
 
         if (dupError) throw dupError;
 
@@ -408,10 +437,16 @@ export default function BillsDetailsPage({
   const billExists = !!billId && billId !== 'create-bill';
 
   // ── Título dinámico según rol ──────────────────────────────────────────────
-  const isProveedor = currentUserRole === 'proveedor';
   const pageTitle = isProveedor
     ? 'Factura'
     : billExists ? 'Editar Factura' : 'Nueva Factura';
+
+  // Si un proveedor intenta acceder a la ruta de creación, lo redirigimos a la lista
+  React.useEffect(() => {
+    if (isProveedor && !billExists) {
+      navigate('/bills', { replace: true });
+    }
+  }, [isProveedor, billExists, navigate]);
 
   return (
     <DashboardLayout title={pageTitle} returnTo="/bills">
@@ -435,10 +470,10 @@ export default function BillsDetailsPage({
             isNewBill={!billExists}
             loading={loading}
             canEdit={canEditSection('recepcion')}
-            userRole={currentUserRole}
             billState={currentBill?.state}
             currentUserId={currentUserId}
             currentBill={currentBill}
+            isProveedor={isProveedor}
           />
         )}
 
@@ -451,10 +486,10 @@ export default function BillsDetailsPage({
             loading={loading}
             allUsers={allUsers}
             canEdit={canEditSection('liquidacion')}
-            userRole={currentUserRole}
             billState={currentBill?.state}
             currentUserId={currentUserId}
             currentBill={currentBill}
+            isProveedor={isProveedor}
           />
         )}
 
@@ -467,10 +502,10 @@ export default function BillsDetailsPage({
             loading={loading}
             allUsers={allUsers}
             canEdit={canEditSection('auditoria')}
-            userRole={currentUserRole}
             billState={currentBill?.state}
             currentUserId={currentUserId}
             currentBill={currentBill}
+            isProveedor={isProveedor}
           />
         )}
 
@@ -483,10 +518,10 @@ export default function BillsDetailsPage({
             loading={loading}
             allUsers={allUsers}
             canEdit={canEditSection('programacion')}
-            userRole={currentUserRole}
             billState={currentBill?.state}
             currentUserId={currentUserId}
             currentBill={currentBill}
+            isProveedor={isProveedor}
           />
         )}
 
@@ -499,10 +534,10 @@ export default function BillsDetailsPage({
             loading={loading}
             allUsers={allUsers}
             canEdit={canEditSection('ejecucion')}
-            userRole={currentUserRole}
             billState={currentBill?.state}
             currentUserId={currentUserId}
             currentBill={currentBill}
+            isProveedor={isProveedor}
           />
         )}
 
@@ -515,10 +550,10 @@ export default function BillsDetailsPage({
             loading={loading}
             allUsers={allUsers}
             canEdit={canEditSection('finiquito')}
-            userRole={currentUserRole}
             billState={currentBill?.state}
             currentUserId={currentUserId}
             currentBill={currentBill}
+            isProveedor={isProveedor}
           />
         )}
       </div>

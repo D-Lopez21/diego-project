@@ -16,9 +16,9 @@ export default function BillsTable({
   bills, loading, error, searchTerm, filterType, getProviderName, onDelete 
 }: BillsTableProps) {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const isProveedor = user?.profile?.role === 'proveedor';
-  const isAdmin = user?.profile?.role === 'admin';
+  const { user, isAdmin } = useAuth();
+  const roles = user?.profile?.roles ?? [];
+  const isProveedor = roles.includes('proveedor');
 
   // Mapeo de estilos basado estrictamente en state_sequence
   const stateStyles: Record<string, string> = {
