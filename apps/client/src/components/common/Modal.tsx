@@ -30,7 +30,9 @@ export default function Modal({
             exit={{ scale: 0.95, y: 20 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e: React.MouseEvent<HTMLDivElement>) =>
+              e.stopPropagation()
+            }
           >
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold text-neutral-800">
